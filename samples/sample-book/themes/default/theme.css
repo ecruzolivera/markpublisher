@@ -1,0 +1,211 @@
+@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap");
+
+:root {
+  --heading-color: #1a1a1a;
+  --text-color: #333333;
+  --background: white;
+  --note-background: #eef4ff;
+  --note-border: #5373a1;
+  --tip-background: #f0fdf4;
+  --tip-border: #16a34a;
+  --code-background: #f0f3f7;
+  --table-border: #c8d1db;
+}
+
+/* #region Block 1: Theme Contract */
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "EB Garamond", sans-serif;
+  font-size: 11pt;
+  line-height: 1.6;
+  color: var(--text-color);
+  background: var(--background);
+}
+
+.page {
+  width: 210mm;
+  height: 297mm;
+  padding: 18mm 14mm 24mm 14mm;
+  position: relative;
+  overflow: hidden;
+  page-break-after: always;
+  background: var(--background);
+}
+
+.page:last-child {
+  page-break-after: auto;
+}
+
+.page.twocol {
+  column-count: 2;
+  column-gap: 7mm;
+  column-fill: auto;
+}
+
+.page.singlecol {
+  column-count: 1;
+}
+
+.page.toc {
+  column-count: 1;
+}
+
+.column-break {
+  break-after: column;
+}
+
+.wide {
+  column-span: all;
+}
+
+.running-header {
+  position: absolute;
+  top: 8mm;
+  left: 14mm;
+  right: 14mm;
+  font-size: 9pt;
+  color: var(--text-color);
+  text-align: center;
+}
+
+.page-number {
+  position: absolute;
+  bottom: 9mm;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 9pt;
+  color: var(--text-color);
+}
+
+.page-number-hidden {
+}
+
+.page-number-hidden .page-number {
+  display: none;
+}
+
+.page-number::after {
+  content: attr(data-page-number);
+}
+
+.toc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.toc-entry {
+  margin-bottom: 0.25em;
+  margin-left: calc(var(--toc-indent-step, 1.5em) * var(--toc-indent, 0));
+}
+
+.toc-page-num {
+  color: var(--text-color);
+}
+
+.toc-link:hover {
+  text-decoration: underline;
+}
+
+/* #endregion */
+
+/* #region Sample Book Styles */
+
+h1,
+h2,
+h3 {
+  font-family: "Noto Sans", sans-serif;
+  font-weight: 700;
+  color: var(--heading-color);
+}
+
+h1 {
+  font-size: 20pt;
+  margin-top: 0;
+  margin-bottom: 0.5em;
+  column-span: all;
+}
+
+h2 {
+  font-size: 15pt;
+  margin-top: 0.9em;
+  margin-bottom: 0.4em;
+}
+
+code {
+  background: var(--code-background);
+  padding: 0.08em 0.3em;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+
+pre {
+  max-width: 100%;
+  overflow-x: auto;
+  break-inside: avoid;
+  background: var(--code-background);
+  padding: 0.8em;
+  border: 1px solid #d7dee8;
+  border-radius: 4px;
+  margin: 1em 0;
+  white-space: pre;
+}
+
+pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1em auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+
+th,
+td {
+  border: 1px solid var(--table-border);
+  padding: 0.4em;
+  text-align: left;
+}
+
+.note {
+  background: var(--note-background);
+  border-left: 4px solid var(--note-border);
+  padding: 0.8em;
+  margin: 1em 0;
+  break-inside: avoid;
+}
+
+.tip {
+  background: var(--tip-background);
+  border-left: 4px solid var(--tip-border);
+  padding: 0.8em;
+  margin: 1em 0;
+  break-inside: avoid;
+}
+
+.callout-box {
+  border-radius: 4px;
+}
+/* #endregion */

@@ -1,0 +1,14 @@
+# Configuración de Marksman para Obsidian Vault
+# Documentación: https://github.com/artempyanykh/marksman
+
+[core]
+# Ignorar directorios que no son contenido de notas
+exclude = [".obsidian/", ".git/", ".trash/", "node_modules/"]
+
+# Mejorar el rendimiento limitando el escaneo
+# Marksman solo procesará archivos .md
+markdown.file_extensions = ["md"]
+[completion.wiki]
+# * "file-stem" to complete using file name without an extension,
+# * "file-path-stem" same as above but using file path.
+style = "file-path-stem"

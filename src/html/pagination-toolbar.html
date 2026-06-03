@@ -1,0 +1,268 @@
+<div
+  id="pagination-toolbar"
+  role="toolbar"
+  aria-label="Preview controls"
+  style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 4px 12px;
+    background: #2d2d2d;
+    color: #ccc;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    height: var(--toolbar-height);
+    box-sizing: border-box;
+  "
+>
+  <div
+    style="
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      border-right: 1px solid #555;
+      padding-right: 12px;
+    "
+    role="group"
+    aria-label="Zoom"
+  >
+    <div style="display: flex; gap: 6px; align-items: center">
+      <button
+        id="tb-fit-width"
+        title="Fit width"
+        style="
+          background: #444;
+          border: none;
+          color: #ddd;
+          padding: 4px 8px;
+          border-radius: 3px;
+          cursor: pointer;
+          font-size: 12px;
+        "
+      >
+        ⭤
+      </button>
+      <button
+        id="tb-fit-page"
+        title="Fit page"
+        style="
+          background: #444;
+          border: none;
+          color: #ddd;
+          padding: 4px 8px;
+          border-radius: 3px;
+          cursor: pointer;
+          font-size: 12px;
+        "
+      >
+        ⛶
+      </button>
+    </div>
+    <div style="display: flex; gap: 6px; align-items: center">
+      <button
+        id="tb-zoom-out"
+        title="Zoom out"
+        style="
+          background: #444;
+          border: none;
+          color: #ddd;
+          padding: 4px 8px;
+          border-radius: 3px;
+          cursor: pointer;
+          font-size: 12px;
+        "
+      >
+        −
+      </button>
+      <input
+        id="tb-zoom-slider"
+        type="range"
+        min="10"
+        max="300"
+        value="100"
+        step="1"
+        title="Zoom"
+        style="width: 80px; accent-color: #6af"
+      />
+      <button
+        id="tb-zoom-in"
+        title="Zoom in"
+        style="
+          background: #444;
+          border: none;
+          color: #ddd;
+          padding: 4px 8px;
+          border-radius: 3px;
+          cursor: pointer;
+          font-size: 12px;
+        "
+      >
+        +
+      </button>
+      <span id="tb-zoom-label" style="min-width: 38px; text-align: center"
+        >100%</span
+      >
+    </div>
+  </div>
+
+  <div
+    style="
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      border-right: 1px solid #555;
+      padding-right: 12px;
+    "
+    role="group"
+    aria-label="Spread"
+  >
+    <button
+      id="tb-spread-single"
+      title="Single page"
+      style="
+        background: #444;
+        border: none;
+        color: #ddd;
+        padding: 4px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+      "
+    >
+      Single
+    </button>
+    <button
+      id="tb-spread-facing"
+      title="Spread pages"
+      style="
+        background: #555;
+        border: none;
+        color: #fff;
+        padding: 4px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+      "
+    >
+      Spreads
+    </button>
+  </div>
+
+  <div
+    style="
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      border-right: 1px solid #555;
+      padding-right: 12px;
+    "
+    role="group"
+    aria-label="Settings"
+  >
+    <label
+      title="Column gap"
+      style="display: flex; align-items: center; gap: 3px; font-size: 11px"
+      >↔
+      <input
+        id="tb-col-gap"
+        type="range"
+        min="0"
+        max="100"
+        value="20"
+        style="width: 50px; accent-color: #6af"
+    /></label>
+    <label
+      title="Row gap"
+      style="display: flex; align-items: center; gap: 3px; font-size: 11px"
+      >↕
+      <input
+        id="tb-row-gap"
+        type="range"
+        min="0"
+        max="100"
+        value="20"
+        style="width: 50px; accent-color: #6af"
+    /></label>
+    <label
+      title="Page shadows"
+      style="display: flex; align-items: center; gap: 3px; font-size: 11px"
+    >
+      Shadows
+      <input
+        id="tb-shadows"
+        type="checkbox"
+        checked
+        style="accent-color: #6af"
+      />
+    </label>
+    <label
+      title="Start on right"
+      style="display: flex; align-items: center; gap: 3px; font-size: 11px"
+    >
+      Start Right
+      <input id="tb-start-right" type="checkbox" checked style="accent-color: #6af" />
+    </label>
+  </div>
+
+  <div
+    style="display: flex; gap: 6px; align-items: center"
+    role="group"
+    aria-label="Navigation"
+  >
+    <button
+      id="tb-prev"
+      title="Previous page"
+      style="
+        background: #444;
+        border: none;
+        color: #ddd;
+        padding: 4px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+      "
+    >
+      ◂
+    </button>
+    <input
+      id="tb-page-input"
+      type="text"
+      size="3"
+      value="1"
+      title="Jump to page"
+      style="
+        width: 36px;
+        text-align: center;
+        background: #333;
+        border: 1px solid #555;
+        color: #ddd;
+        border-radius: 3px;
+        font-size: 12px;
+        padding: 2px;
+      "
+    />
+    <span id="tb-page-count" style="font-size: 12px">/ 1</span>
+    <button
+      id="tb-next"
+      title="Next page"
+      style="
+        background: #444;
+        border: none;
+        color: #ddd;
+        padding: 4px 8px;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 12px;
+      "
+    >
+      ▸
+    </button>
+  </div>
+</div>

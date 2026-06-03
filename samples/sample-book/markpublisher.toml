@@ -1,0 +1,13 @@
+input = "book.md"
+theme = "default"
+outputDir = "./output"
+
+[output]
+html = true
+pdf = true
+
+[build]
+failOnWarning = false
+
+[serve]
+port = 3000
