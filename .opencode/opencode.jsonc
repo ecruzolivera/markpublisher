@@ -6,14 +6,18 @@
       // "model": "github-copilot/claude-sonnet-4.6",
     },
     "build": {
-      "model": "opencode-go/deepseek-v4-flash",
+      "model": "opencode-go/deepseek-v4-pro",
       //"model": "github-copilot/claude-sonnet-4.6",
     },
   },
   "mcp": {
     "shadcn": {
       "type": "local",
-      "command": ["npx", "shadcn@latest", "mcp"],
+      "command": [
+        "npx",
+        "shadcn@latest",
+        "mcp"
+      ],
       "enabled": true,
     },
   },

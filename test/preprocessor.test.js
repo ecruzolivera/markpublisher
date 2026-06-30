@@ -328,6 +328,27 @@ title: Test
     cleanup();
   });
 
+  it('resolves wikilink includes with dotted stems', () => {
+    const chaptersDir = path.join(TEST_DIR, 'chapters');
+    fs.mkdirSync(chaptersDir, { recursive: true });
+    fs.writeFileSync(path.join(chaptersDir, '02.1-reusable partials.md'), 'Partial using dotted stem.');
+    writeFixture(path.join('chapters', 'test.md'), `---
+title: Test
+---
+
+# Chapter
+
+![[chapters/02.1-reusable partials]]
+`);
+
+    const result = preprocess(path.join(chaptersDir, 'test.md'), [], TEST_DIR);
+    assert.ok(result.success);
+    assert.ok(!result.warnings.some(w => w.includes('Missing include')));
+    const firstPageLines = result.pages[0].lines.join('\n');
+    assert.ok(firstPageLines.includes('Partial using dotted stem'));
+    cleanup();
+  });
+
   it('renders wikilink image includes as markdown images', () => {
     const imagesDir = path.join(TEST_DIR, 'images');
     fs.mkdirSync(imagesDir, { recursive: true });

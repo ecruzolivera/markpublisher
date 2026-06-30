@@ -84,4 +84,24 @@ describe('path resolver', () => {
     assert.ok(!result.endsWith('.md.md'));
     cleanup();
   });
+
+  it('resolveInclude appends .md for dotted stems', () => {
+    const result = resolveInclude('02.1-reusable partials', '/book/volume.md');
+    assert.ok(result.endsWith(path.normalize('/book/02.1-reusable partials.md')));
+  });
+
+  it('resolveWikiInclude resolves dotted stems from project root', () => {
+    cleanup();
+    fs.mkdirSync(path.join(TEST_DIR, 'chapters'), { recursive: true });
+    fs.writeFileSync(path.join(TEST_DIR, 'chapters', '02.1-reusable partials.md'), 'content');
+
+    const result = resolveWikiInclude(
+      'chapters/02.1-reusable partials',
+      TEST_DIR,
+      path.join(TEST_DIR, 'chapters', 'chapter.md'),
+    );
+
+    assert.ok(result.endsWith(`${path.sep}chapters${path.sep}02.1-reusable partials.md`));
+    cleanup();
+  });
 });
