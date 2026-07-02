@@ -1,3 +1,5 @@
+name = "my sample book"
+
 input = "book.md"
 theme = "default"
 outputDir = "./output"

@@ -1,5 +1,5 @@
 const ALLOWED_KEYS = [
-  'input', 'theme', 'outputDir',
+  'input', 'theme', 'outputDir', 'name',
   'output', 'build', 'serve',
 ];
 
@@ -12,6 +12,7 @@ const FORBIDDEN_KEYS = [
 const DEFAULTS = {
   theme: 'default',
   outputDir: './output',
+  name: 'output',
   output: {
     html: true,
     pdf: true,
@@ -63,6 +64,13 @@ export function validateConfig(raw, sourcePath) {
       errors.push(`[${sourcePath}] Config "outputDir" must be a string`);
     }
     result.outputDir = raw.outputDir;
+  }
+
+  if (raw.name !== undefined) {
+    if (typeof raw.name !== 'string') {
+      errors.push(`[${sourcePath}] Config "name" must be a string`);
+    }
+    result.name = raw.name;
   }
 
   if (raw.output !== undefined && typeof raw.output === 'object') {

@@ -36,7 +36,7 @@ export async function buildCommand() {
 
   const outputDir = path.resolve(config._configDir || process.cwd(), config.outputDir || './output');
   fs.mkdirSync(outputDir, { recursive: true });
-  const htmlPath = path.join(outputDir, 'output.html');
+  const htmlPath = path.join(outputDir, (config.name || 'output') + '.html');
   const shouldWriteHtml = config.output?.html !== false;
   const assetBundler = createAssetBundler({ outputDir, warnings: warnAll });
   const bundledThemeParts = [];
@@ -105,7 +105,7 @@ export async function buildCommand() {
 
   if (config.output?.pdf !== false) {
     console.log('Generating PDF...');
-    const pdfPath = path.join(outputDir, 'output.pdf');
+    const pdfPath = path.join(outputDir, (config.name || 'output') + '.pdf');
     try {
       if (!shouldWriteHtml) {
         fs.writeFileSync(htmlPath, htmlWithToolbar);
