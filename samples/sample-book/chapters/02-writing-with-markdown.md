@@ -33,17 +33,7 @@ The `book.md` for this tutorial uses includes to pull in each chapter. This keep
 
 <!--pagebreak-->
 
-## Reusable Partials
-
-Place repeated content in `partials/` and include it anywhere with the same wikilink syntax: `![[partials/file-name]]`.
-
-Partials can be included multiple times -- the content is inlined each time. Here is a reusable callout:
-
-![[partials/callout]]
-
-And again, because partials are reusable:
-
-![[partials/callout]]
+![[chapters/02.1-reusable partials]]
 
 <!--pagebreak-->
 

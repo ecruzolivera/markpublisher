@@ -20,6 +20,7 @@ export async function generatePdf(htmlPath, pdfSize, outputPath) {
 
     const pdfOptions = {
       printBackground: true,
+      outline: true,
       margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
     };
 

@@ -4,6 +4,7 @@ author: Ernesto Cruz Olivera
 lang: en
 ---
 
+<!-- page-number:none -->
 <!-- header:hide -->
 
 <!-- layout:singlecol -->
@@ -12,7 +13,6 @@ lang: en
 
 A step-by-step guide to publishing professional books with extended Markdown. By the end of this tutorial you will know how to structure a book, control layout, style content, manage page numbering, edit the theme, and generate HTML and PDF output.
 
-<!-- page-number:none -->
 <!-- pagebreak -->
 
 ## Table of Contents
