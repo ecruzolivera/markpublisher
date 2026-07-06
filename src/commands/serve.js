@@ -53,7 +53,8 @@ export async function serveCommand() {
         if (!path.isAbsolute(src) || src.startsWith('/files/')) {
           return full;
         }
-        const relative = path.relative(config._configDir, src);
+        const decodedSrc = (() => { try { return decodeURI(src); } catch { return src; } })();
+        const relative = path.relative(config._configDir, decodedSrc);
         if (relative.startsWith('..')) {
           return full;
         }

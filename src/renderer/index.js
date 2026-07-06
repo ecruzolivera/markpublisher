@@ -127,8 +127,8 @@ export function transformDirectives(pageContent, state) {
       state.pendingImageCss = null;
       const imageMatch = trimmed.match(/^!\[(.*?)\]\((.+?)\)$/);
       const alt = imageMatch ? imageMatch[1] : '';
-      const src = imageMatch ? imageMatch[2] : '';
-      result.push(`![${alt}](${src}){style="${escapeHtmlAttribute(css)}" marker="image-css"}`);
+      const src = imageMatch ? imageMatch[2].replace(/^<|>$/g, '') : '';
+      result.push(`![${alt}](<${src}>){style="${escapeHtmlAttribute(css)}" marker="image-css"}`);
       continue;
     }
 

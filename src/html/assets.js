@@ -235,8 +235,10 @@ function resolveReference(reference, baseSource) {
     };
   }
 
-  if (path.isAbsolute(reference)) {
-    return { type: 'local', path: path.normalize(reference) };
+  const decodedReference = tryDecodeUri(reference);
+
+  if (path.isAbsolute(decodedReference)) {
+    return { type: 'local', path: path.normalize(decodedReference) };
   }
 
   if (!baseSource) {
@@ -246,11 +248,19 @@ function resolveReference(reference, baseSource) {
   if (baseSource.type === 'local') {
     return {
       type: 'local',
-      path: path.normalize(path.resolve(path.dirname(baseSource.path), reference)),
+      path: path.normalize(path.resolve(path.dirname(baseSource.path), decodedReference)),
     };
   }
 
   return null;
+}
+
+function tryDecodeUri(value) {
+  try {
+    return decodeURI(value);
+  } catch {
+    return value;
+  }
 }
 
 function stripCssUrl(rawValue) {

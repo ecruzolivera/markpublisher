@@ -134,7 +134,7 @@ function resolveIncludes(content, sourcePath, warnings, depth, visited, included
 
       if (/\.(svg|png|jpg|jpeg|gif|webp)$/i.test(path.extname(target))) {
         const alt = path.basename(target, path.extname(target));
-        result.push(`![${alt}](${canonical})`);
+        result.push(`![${alt}](<${canonical}>)`);
         result.push(`<!-- END_INCLUDE:${target} -->`);
         continue;
       }
@@ -187,7 +187,7 @@ function resolveLocalMarkdownImages(line, sourcePath, projectRoot) {
     }
 
     const resolved = normalizePath(resolveProjectImage(target, sourcePath, projectRoot));
-    return `![${alt}](${resolved})`;
+    return `![${alt}](<${resolved}>)`;
   });
 
   return rewrittenMarkdownImages.replace(/<img\b([^>]*?)\ssrc=(['"])([^'"]+)\2([^>]*)>/gi, (fullMatch, beforeSrc, quote, rawTarget, afterSrc) => {

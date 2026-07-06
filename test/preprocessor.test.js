@@ -303,7 +303,7 @@ title: Test
     const result = preprocess(path.join(TEST_DIR, 'test.md'));
     assert.ok(result.success);
     const firstPageLines = result.pages[0].lines.join('\n');
-    assert.ok(firstPageLines.includes(`![Cover](${path.join(TEST_DIR, 'images', 'cover.svg').replace(/\\/g, '/')})`));
+    assert.ok(firstPageLines.includes(`![Cover](<${path.join(TEST_DIR, 'images', 'cover.svg').replace(/\\/g, '/')}>)`));
     cleanup();
   });
 
@@ -324,7 +324,7 @@ title: Test
     const result = preprocess(path.join(TEST_DIR, 'test.md'));
     assert.ok(result.success);
     const firstPageLines = result.pages[0].lines.join('\n');
-    assert.ok(firstPageLines.includes(`![Diagram](${path.join(TEST_DIR, 'images', 'diagram.svg').replace(/\\/g, '/')})`));
+    assert.ok(firstPageLines.includes(`![Diagram](<${path.join(TEST_DIR, 'images', 'diagram.svg').replace(/\\/g, '/')}>)`));
     cleanup();
   });
 
