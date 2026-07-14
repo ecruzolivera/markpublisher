@@ -15,9 +15,13 @@ A step-by-step guide to publishing professional books with extended Markdown. By
 
 <!-- pagebreak -->
 
+<!-- wide -->
+
 ## Table of Contents
 
-<!-- toc:pages=3 levels=1,2 -->
+<!-- /wide -->
+
+<!-- toc:pages=3 levels=1,2,3 -->
 
 <!-- pagebreak -->
 
@@ -40,3 +44,273 @@ A step-by-step guide to publishing professional books with extended Markdown. By
 ![[chapters/07-editing-the-default-theme]]
 
 ![[chapters/08-reference-appendix]]
+
+<!-- pagebreak -->
+
+<!-- layout:twocol -->
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+<!-- pagebreak -->
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+<!-- pagebreak -->
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+<!-- pagebreak -->
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+<!-- pagebreak -->
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+<!-- pagebreak -->
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4
+
+# H1
+
+## H2
+
+### H3
+
+#### H4

@@ -158,32 +158,42 @@
     return li;
   }
 
-  function contentBoxBottom(page) {
+  function contentBounds(page) {
     var cs = getComputedStyle(page);
     var rect = page.getBoundingClientRect();
-    var pb = parseFloat(cs.paddingBottom) || 0;
-    return rect.bottom - pb;
+    var scaleX = page.offsetWidth ? rect.width / page.offsetWidth : 1;
+    var scaleY = page.offsetHeight ? rect.height / page.offsetHeight : 1;
+    return {
+      left: rect.left + (parseFloat(cs.paddingLeft) || 0) * scaleX,
+      right: rect.right - (parseFloat(cs.paddingRight) || 0) * scaleX,
+      bottom: rect.bottom - (parseFloat(cs.paddingBottom) || 0) * scaleY,
+    };
   }
 
-  function availableBottom(placeholder) {
+  function availableBounds(placeholder) {
     var page = placeholder.closest(".page");
-    if (!page) return 0;
+    if (!page) return null;
+
+    var bounds = contentBounds(page);
 
     var pageNumber = page.querySelector(".page-number");
     if (pageNumber) {
       var style = getComputedStyle(pageNumber);
       if (style.display !== "none" && style.visibility !== "hidden") {
-        return Math.min(pageNumber.getBoundingClientRect().top, contentBoxBottom(page));
+        bounds.bottom = Math.min(pageNumber.getBoundingClientRect().top, bounds.bottom);
       }
     }
 
-    return contentBoxBottom(page);
+    return bounds;
   }
 
-  function entryFits(maxBottom, entry) {
+  function entryFits(bounds, entry) {
     var rect = entry.getBoundingClientRect();
-    var safetyGap = 2;
-    return rect.bottom + safetyGap <= maxBottom;
+    var verticalSafetyGap = 2;
+    var measurementEpsilon = 0.5;
+    return rect.left >= bounds.left - measurementEpsilon
+      && rect.right <= bounds.right + measurementEpsilon
+      && rect.bottom + verticalSafetyGap <= bounds.bottom;
   }
 
   function createList(placeholder) {
@@ -209,14 +219,20 @@
     while (entryIdx < entries.length && pageIdx < items.length) {
       var placeholder = items[pageIdx];
       var list = createList(placeholder);
-      var maxBottom = availableBottom(placeholder);
+
+      if (!availableBounds(placeholder)) {
+        pageIdx++;
+        continue;
+      }
 
       while (entryIdx < entries.length) {
         var entry = entries[entryIdx];
         var li = createEntry(entry);
         list.appendChild(li);
 
-        if (!entryFits(maxBottom, li)) {
+        // Adding columns can reposition a page in the preview grid.
+        var bounds = availableBounds(placeholder);
+        if (!entryFits(bounds, li)) {
           list.removeChild(li);
           pageIdx++;
           break;
@@ -240,19 +256,26 @@
     console.warn("MarkPublisher: TOC overflow - not all entries fit. Increase toc:pages=N in your source.");
   }
 
-  var headings = collectHeadings(document.body);
-  if (headings.length === 0) {
+  function renderToc() {
+    var headings = collectHeadings(document.body);
+    if (headings.length === 0) {
+      ensureEmptyLists(placeholders);
+      return;
+    }
+
+    var rootItems = buildHeadingTree(headings);
+    var entries = flattenTree(rootItems);
+    var renderedEntries = paginate(entries, placeholders);
+
     ensureEmptyLists(placeholders);
-    return;
+
+    if (renderedEntries < entries.length) {
+      renderOverflowWarning(placeholders);
+    }
   }
 
-  var rootItems = buildHeadingTree(headings);
-  var entries = flattenTree(rootItems);
-  var renderedEntries = paginate(entries, placeholders);
-
-  ensureEmptyLists(placeholders);
-
-  if (renderedEntries < entries.length) {
-    renderOverflowWarning(placeholders);
-  }
+  var fontsReady = document.fonts && document.fonts.ready
+    ? document.fonts.ready
+    : Promise.resolve();
+  window.__tocReady = fontsReady.then(renderToc);
 })();

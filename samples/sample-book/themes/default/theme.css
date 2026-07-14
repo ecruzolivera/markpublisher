@@ -56,7 +56,9 @@ body {
 }
 
 .page.toc {
-  column-count: 1;
+  column-count: 2;
+  column-gap: 7mm;
+  column-fill: auto;
 }
 
 .column-break {

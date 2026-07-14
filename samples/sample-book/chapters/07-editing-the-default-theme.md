@@ -41,6 +41,8 @@ What to change:
 - `padding`: controls margins inside the page. `18mm 14mm 24mm 14mm` means top 18mm, right 14mm, bottom 24mm, left 14mm. The larger bottom margin leaves room for page numbers
 - `background`: the page fill color. Each page is drawn as a white rectangle over a subtle gray background
 
+<!-- pagebreak -->
+
 ## Column Layout
 
 These classes control single and two-column layouts:
@@ -82,6 +84,8 @@ This rule is used by the `<!-- columnbreak -->` directive. The `break-after: col
 
 The `wide` class, applied via `<!-- apply-next:.wide -->`, makes an element span both columns. This is used for headings, images, or tables that need the full page width.
 
+<!-- pagebreak -->
+
 ## Base Typography
 
 ```css
@@ -104,10 +108,14 @@ What to change:
 - `color`: text color
 - `background`: the background behind the pages (not inside them)
 
+<!-- pagebreak -->
+
 ## Heading Typography
 
 ```css
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   font-family: "Noto Sans", sans-serif;
   font-weight: 700;
 }
@@ -131,6 +139,8 @@ What to change:
 - `font-family`: the heading typeface. The default uses Noto Sans for contrast against the serif body
 - `font-size`: heading sizes. `h1` is 20pt (chapter titles), `h2` is 15pt (section headings)
 - `column-span: all` on `h1` ensures chapter titles always span both columns
+
+<!-- pagebreak -->
 
 Running headers sit at the top of every page:
 
@@ -166,6 +176,8 @@ What to change:
 - `font-size`: usually smaller than body text (8-10pt)
 - `color`: subtle color for running text that should not compete with body content
 - `text-align`: use `left`/`right` for facing-page headers, `center` for single-sided
+
+<!-- pagebreak -->
 
 ## Callout Containers
 
@@ -210,6 +222,8 @@ This is a warning callout.
 <!-- /warning -->
 ```
 
+<!-- pagebreak -->
+
 Extra classes on containers also work:
 
 ```md
@@ -239,7 +253,8 @@ table {
   font-size: 0.9em;
 }
 
-th, td {
+th,
+td {
   border: 1px solid #c8d1db;
   padding: 0.4em;
   text-align: left;
@@ -252,6 +267,8 @@ What to change:
 - `table` font size: `0.9em` makes tables slightly smaller than body text
 - `th, td` border color: match to your color palette
 - `th, td` padding: increase for larger cells, decrease for compact tables
+
+<!-- pagebreak -->
 
 ## TOC Styling
 
@@ -290,23 +307,25 @@ The default theme imports fonts from Google Fonts at the top of the file:
 
 This is convenient for development but means the output depends on network availability. For fully offline builds, download font files into a `fonts/` directory inside your theme and use `@font-face` rules instead.
 
+<!-- pagebreak -->
+
 ## Quick Reference: What Controls What
 
-| Visual Element | CSS Selector |
-| -------------- | ------------ |
-| Paper size | `@page { size: ... }` |
-| Page dimensions | `.page { width; height }` |
-| Page margins | `.page { padding }` |
-| Body text | `body { font-family; font-size }` |
-| Headings | `h1, h2, h3 { ... }` |
-| Running headers | `.running-header` |
-| Page numbers | `.page-number` |
-| Two-column gap | `.page.twocol { column-gap }` |
-| Full-width elements | `.wide { column-span: all }` |
-| Column breaks | `.column-break { break-after: column }` |
-| Callout boxes | `.note { background; border }` |
-| Images | `img { max-width }` |
-| Tables | `table, th, td { ... }` |
-| Table of contents | `.toc-list, .toc-entry, .toc-page-num` |
+| Visual Element      | CSS Selector                            |
+| ------------------- | --------------------------------------- |
+| Paper size          | `@page { size: ... }`                   |
+| Page dimensions     | `.page { width; height }`               |
+| Page margins        | `.page { padding }`                     |
+| Body text           | `body { font-family; font-size }`       |
+| Headings            | `h1, h2, h3 { ... }`                    |
+| Running headers     | `.running-header`                       |
+| Page numbers        | `.page-number`                          |
+| Two-column gap      | `.page.twocol { column-gap }`           |
+| Full-width elements | `.wide { column-span: all }`            |
+| Column breaks       | `.column-break { break-after: column }` |
+| Callout boxes       | `.note { background; border }`          |
+| Images              | `img { max-width }`                     |
+| Tables              | `table, th, td { ... }`                 |
+| Table of contents   | `.toc-list, .toc-entry, .toc-page-num`  |
 
 <!-- pagebreak -->

@@ -48,25 +48,25 @@ One-shot Directive
 Persistent Directive
 : A directive whose state continues across page breaks until explicitly changed. `layout:`, `page-number:`, and `header:` are persistent directives.
 
+<!-- pagebreak -->
+
 ## Abbreviations
 
 Define abbreviations with `*[abbreviation]: expansion` syntax:
 
 ```md
-*[HTML]: HyperText Markup Language
-*[CSS]: Cascading Style Sheets
-*[PDF]: Portable Document Format
+_[HTML]: HyperText Markup Language
+_[CSS]: Cascading Style Sheets \*[PDF]: Portable Document Format
 ```
 
 Abbreviations appear with a dotted underline, and hovering shows the full expansion. This is powered by the `markdown-it-abbr` plugin.
 
 Define abbreviations anywhere in the document. They are collected and applied globally.
 
-*[HTML]: HyperText Markup Language
-*[CSS]: Cascading Style Sheets
-*[PDF]: Portable Document Format
-*[TOC]: Table of Contents
-*[CLI]: Command Line Interface
+_[HTML]: HyperText Markup Language
+_[CSS]: Cascading Style Sheets
+_[PDF]: Portable Document Format
+_[TOC]: Table of Contents \*[CLI]: Command Line Interface
 
 ## Subscript and Superscript
 

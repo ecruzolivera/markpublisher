@@ -38,24 +38,26 @@ Syntax:
 
 <!-- table: 25%, 50%, 25% -->
 
-| Directive | Purpose | One-shot |
-| --------- | ------- | -------- |
-| `image:` | Style next image | Yes |
-| `table:` | Set next table column widths | Yes |
-| `apply-next:` | Add classes/id to next block | Yes |
-| `toc` | Insert table of contents | No |
-| `pagebreak` | Start new page | No |
+| Directive     | Purpose                      | One-shot |
+| ------------- | ---------------------------- | -------- |
+| `image:`      | Style next image             | Yes      |
+| `table:`      | Set next table column widths | Yes      |
+| `apply-next:` | Add classes/id to next block | Yes      |
+| `toc`         | Insert table of contents     | No       |
+| `pagebreak`   | Start new page               | No       |
 
 This table has custom column widths. The next table uses default width distribution:
 
-| Feature | Status | Notes |
-| ------- | ------ | ----- |
-| TOC generation | Ready | From headings |
-| Wikilinks | Ready | With cycle detection |
-| Themes | Ready | Single CSS file |
-| PDF output | Ready | Via Puppeteer |
+| Feature        | Status | Notes                |
+| -------------- | ------ | -------------------- |
+| TOC generation | Ready  | From headings        |
+| Wikilinks      | Ready  | With cycle detection |
+| Themes         | Ready  | Single CSS file      |
+| PDF output     | Ready  | Via Puppeteer        |
 
 The `table:` directive is one-shot. Only the table immediately following the directive gets the custom widths.
+
+<!-- pagebreak -->
 
 ## `apply-next:`
 
@@ -116,6 +118,8 @@ Content here.
 **Pro Tip:** This container has both a class and an ID. The tag becomes `class="tip callout-box"` and `id="tip-1"`. Use classes and IDs when you need multiple container variants or want to target specific containers from `theme.css`.
 
 <!-- /tip -->
+
+<!-- pagebreak -->
 
 ### Nesting Containers
 

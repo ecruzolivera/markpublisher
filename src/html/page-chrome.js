@@ -53,6 +53,8 @@ export function generatePageChrome() {
 .toc-entry {
   margin-bottom: 0.25em;
   margin-left: calc(var(--toc-indent-step, 1.5em) * var(--toc-indent, 0));
+  break-inside: avoid;
+  page-break-inside: avoid;
 }
 .toc-link {
   display: flex;

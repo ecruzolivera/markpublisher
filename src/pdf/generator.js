@@ -16,6 +16,7 @@ export async function generatePdf(htmlPath, pdfSize, outputPath) {
 
     await page.evaluate(async () => {
       await document.fonts.ready;
+      await window.__tocReady;
     });
 
     const pdfOptions = {
