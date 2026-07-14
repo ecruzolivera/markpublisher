@@ -162,7 +162,10 @@ export function transformPageContent(pageContent, pageMeta) {
   const transformed = transformDirectives(pageContent, state);
   const html = renderMarkdown(transformed);
 
-  let processedHtml = html;
+  // Unwrap standalone and linked images from paragraph tags to prevent
+  // paragraph margins and block-formatting-context issues in multi-column layouts.
+  let processedHtml = html.replace(/<p>\s*(<img\b[^>]*>)\s*<\/p>/g, '$1');
+  processedHtml = processedHtml.replace(/<p>\s*(<a\b[^>]*>\s*<img\b[^>]*>\s*<\/a>)\s*<\/p>/g, '$1');
 
   processedHtml = processedHtml.replace(
     /<!--\s*TABLE_WIDTHS:(.+?)\s*-->\s*(<table[^>]*>)/g,
