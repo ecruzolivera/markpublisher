@@ -16,7 +16,7 @@ describe('config validation', () => {
     const result = validateConfig({
       page_size: 'A4',
     }, 'test.toml');
-    assert.ok(result.errors.some(e => e.includes('theme.toml')));
+    assert.ok(result.errors.some(e => e.includes('theme.css')));
   });
 
   it('accepts valid config keys', () => {

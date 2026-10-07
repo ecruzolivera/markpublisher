@@ -34,5 +34,5 @@ Usage:
 
 main().catch(err => {
   console.error('Error:', err.message);
-  process.exit(3);
+  process.exit(err.exitCode || 3);
 });

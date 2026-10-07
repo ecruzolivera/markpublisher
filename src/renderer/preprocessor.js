@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
-import { resolveInclude, resolveWikiInclude, resolveProjectImage, resolveImage, normalizePath } from '../paths/resolver.js';
+import { resolveWikiInclude, resolveProjectImage, normalizePath } from '../paths/resolver.js';
 import { validateFrontmatter } from '../validate/frontmatter.js';
+import { findCodeLines } from './fences.js';
+import { rewriteImageDestinations, encodeAssetPath } from './images.js';
 
 const MAX_INCLUDE_DEPTH = 10;
 
@@ -56,57 +58,25 @@ export function preprocess(sourcePath, warnings = [], projectRoot) {
     warnings,
     pages,
     frontMatter,
+    sourcePath,
     includedFiles: Array.from(resolved.included),
     referencedIncludeFiles: Array.from(resolved.referenced),
   };
-}
-
-function isFenceBoundary(line, fence) {
-  const trimmed = line.trim();
-  if (fence.inFence) {
-    if (fence.marker === '`' && /^`{3,}\s*$/.test(trimmed)) {
-      fence.inFence = false;
-      return true;
-    }
-    if (fence.marker === '~' && /^~{3,}\s*$/.test(trimmed)) {
-      fence.inFence = false;
-      return true;
-    }
-    return false;
-  }
-  const backtickMatch = trimmed.match(/^(`{3,})/);
-  if (backtickMatch) {
-    fence.inFence = true;
-    fence.marker = '`';
-    return true;
-  }
-  const tildeMatch = trimmed.match(/^(~{3,})/);
-  if (tildeMatch) {
-    fence.inFence = true;
-    fence.marker = '~';
-    return true;
-  }
-  return false;
 }
 
 function resolveIncludes(content, sourcePath, warnings, depth, visited, included = new Set(), referenced = new Set(), projectRoot) {
   const lines = content.split('\n');
   const result = [];
   const errors = [];
-  const fence = { inFence: false, marker: '' };
+  const codeLines = findCodeLines(lines);
 
   if (depth > MAX_INCLUDE_DEPTH) {
     errors.push(`[${sourcePath}] Max include depth (${MAX_INCLUDE_DEPTH}) exceeded — possible circular reference`);
     return { content: content, errors, included, referenced };
   }
 
-  for (const line of lines) {
-    if (isFenceBoundary(line, fence)) {
-      result.push(line);
-      continue;
-    }
-
-    if (fence.inFence) {
+  for (const [index, line] of lines.entries()) {
+    if (codeLines.has(index)) {
       result.push(line);
       continue;
     }
@@ -134,7 +104,7 @@ function resolveIncludes(content, sourcePath, warnings, depth, visited, included
 
       if (/\.(svg|png|jpg|jpeg|gif|webp)$/i.test(path.extname(target))) {
         const alt = path.basename(target, path.extname(target));
-        result.push(`![${alt}](<${canonical}>)`);
+        result.push(`![${alt}](<${encodeAssetPath(canonical)}>)`);
         result.push(`<!-- END_INCLUDE:${target} -->`);
         continue;
       }
@@ -179,32 +149,19 @@ function resolveWikilinkReferences(line, sourcePath, projectRoot, warnings, refe
 }
 
 function resolveLocalMarkdownImages(line, sourcePath, projectRoot) {
-  const rewrittenMarkdownImages = line.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (fullMatch, alt, rawTarget) => {
-    const target = rawTarget.trim();
-
-    if (!isLocalAssetTarget(target)) {
-      return fullMatch;
-    }
-
+  return rewriteImageDestinations(line, target => {
+    if (!isLocalAssetTarget(target)) return target;
+    const suffixIndex = target.search(/[?#]/);
+    const suffix = suffixIndex < 0 ? '' : target.slice(suffixIndex);
     const resolved = normalizePath(resolveProjectImage(target, sourcePath, projectRoot));
-    return `![${alt}](<${resolved}>)`;
-  });
-
-  return rewrittenMarkdownImages.replace(/<img\b([^>]*?)\ssrc=(['"])([^'"]+)\2([^>]*)>/gi, (fullMatch, beforeSrc, quote, rawTarget, afterSrc) => {
-    const target = rawTarget.trim();
-
-    if (!isLocalAssetTarget(target)) {
-      return fullMatch;
-    }
-
-    const resolved = normalizePath(resolveProjectImage(target, sourcePath, projectRoot));
-    return `<img${beforeSrc} src=${quote}${resolved}${quote}${afterSrc}>`;
+    const filePath = suffix ? resolved.slice(0, -suffix.length) : resolved;
+    return encodeAssetPath(filePath) + suffix;
   });
 }
 
 function isLocalAssetTarget(target) {
   return !/^(?:[a-z][a-z0-9+.-]*:)?\/\//i.test(target)
-    && !target.startsWith('data:')
+    && !/^data:/i.test(target)
     && !target.startsWith('#');
 }
 
@@ -224,18 +181,13 @@ function processDirectives(lines, warnings) {
     tocExclude: false,
     tocPages: 0,
   };
-  const fence = { inFence: false, marker: '' };
+  const codeLines = findCodeLines(lines);
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
 
-    if (isFenceBoundary(line, fence)) {
-      result.push(line);
-      continue;
-    }
-
-    if (fence.inFence) {
+    if (codeLines.has(i)) {
       result.push(line);
       continue;
     }
@@ -262,7 +214,7 @@ function processDirectives(lines, warnings) {
     if (trimmed.match(DIRECTIVE_PATTERNS.pagebreak)) {
       if (state.openContainers.length) {
         warnings.push(`pagebreak auto-closes ${state.openContainers.length} open container(s): ${state.openContainers.join(', ')}`);
-        state.openContainers = [];
+        while (state.openContainers.length) result.push(`<!-- /${state.openContainers.pop()} -->`);
       }
       result.push('<!-- pagebreak -->');
       matched = true;
@@ -405,6 +357,8 @@ function processDirectives(lines, warnings) {
 
   if (state.openContainers.length) {
     warnings.push(`${state.openContainers.length} unclosed container(s): ${state.openContainers.join(', ')}`);
+    // The renderer closes EOF wrappers after Markdown rendering, so a valid
+    // unclosed code fence cannot swallow synthetic closing directives.
   }
 
   return { lines: result, state };
@@ -419,7 +373,7 @@ function splitPages(lines, endState, warnings) {
   let numberCounter = 0;
   let headerVisible = false;
   let skipTocTrailingPagebreak = false;
-  const fence = { inFence: false, marker: '' };
+  const codeLines = findCodeLines(lines);
 
   function pushPage(pageLines, overrides = {}) {
     pages.push({
@@ -438,13 +392,8 @@ function splitPages(lines, endState, warnings) {
     }
   }
 
-  for (const line of lines) {
-    if (isFenceBoundary(line, fence)) {
-      currentLines.push(line);
-      continue;
-    }
-
-    if (fence.inFence) {
+  for (const [index, line] of lines.entries()) {
+    if (codeLines.has(index)) {
       currentLines.push(line);
       continue;
     }

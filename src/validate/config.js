@@ -29,16 +29,20 @@ export function validateConfig(raw, sourcePath) {
   const warnings = [];
   const errors = [];
 
-  if (!raw || typeof raw !== 'object') {
-    return { data: { ...DEFAULTS }, warnings: [], errors: [] };
+  const result = {
+    ...DEFAULTS,
+    output: { ...DEFAULTS.output },
+    build: { ...DEFAULTS.build },
+    serve: { ...DEFAULTS.serve },
+  };
+  if (!isTable(raw)) {
+    return { data: result, warnings, errors: [`[${sourcePath}] Config must be a table`] };
   }
-
-  const result = { ...DEFAULTS };
 
   for (const key of Object.keys(raw)) {
     if (!ALLOWED_KEYS.includes(key)) {
       if (FORBIDDEN_KEYS.includes(key)) {
-        errors.push(`[${sourcePath}] Key "${key}" belongs in theme.toml, not markpublisher.toml`);
+        errors.push(`[${sourcePath}] Key "${key}" belongs in theme.css, not markpublisher.toml`);
       } else {
         warnings.push(`[${sourcePath}] Unknown config key: "${key}"`);
       }
@@ -73,17 +77,33 @@ export function validateConfig(raw, sourcePath) {
     result.name = raw.name;
   }
 
-  if (raw.output !== undefined && typeof raw.output === 'object') {
-    result.output = { ...DEFAULTS.output, ...raw.output };
-  }
-
-  if (raw.build !== undefined && typeof raw.build === 'object') {
-    result.build = { ...DEFAULTS.build, ...raw.build };
-  }
-
-  if (raw.serve !== undefined && typeof raw.serve === 'object') {
-    result.serve = { ...DEFAULTS.serve, ...raw.serve };
+  for (const table of ['output', 'build', 'serve']) {
+    if (raw[table] === undefined) continue;
+    if (!isTable(raw[table])) {
+      errors.push(`[${sourcePath}] Config "${table}" must be a table`);
+      continue;
+    }
+    for (const [key, value] of Object.entries(raw[table])) {
+      if (!Object.hasOwn(DEFAULTS[table], key)) {
+        warnings.push(`[${sourcePath}] Unknown config key: "${table}.${key}"`);
+        continue;
+      }
+      const valid = table === 'serve'
+        ? Number.isInteger(value) && value >= 1 && value <= 65535
+        : typeof value === 'boolean';
+      if (!valid) {
+        errors.push(`[${sourcePath}] Config "${table}.${key}" must be ${table === 'serve' ? 'an integer from 1 to 65535' : 'a boolean'}`);
+        continue;
+      }
+      result[table][key] = value;
+    }
   }
 
   return { data: result, warnings, errors };
+}
+
+function isTable(value) {
+  if (value === null || typeof value !== 'object') return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }

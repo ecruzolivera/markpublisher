@@ -23,7 +23,7 @@ export function buildHtmlDocument(pages, themeStylesheetHref, frontMatter, pageC
     }
 
     const headerHtml = page.headerText && page.headerVisible
-      ? `<header class="running-header">${page.headerText}</header>`
+      ? `<header class="running-header">${escapeHtml(page.headerText)}</header>`
       : '';
 
     const pageNumAttr = page.numbering === 'arabic' && page.pageNumber != null
@@ -42,7 +42,7 @@ ${page.html}
   }).join('\n\n');
 
   return `<!DOCTYPE html>
-<html lang="${lang}">
+<html lang="${escapeHtml(lang)}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

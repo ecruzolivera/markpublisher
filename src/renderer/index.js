@@ -1,48 +1,19 @@
 import { renderMarkdown } from './markdown.js';
-
-function isFenceBoundary(line, fence) {
-  const trimmed = line.trim();
-  if (fence.inFence) {
-    if (fence.marker === '`' && /^`{3,}\s*$/.test(trimmed)) {
-      fence.inFence = false;
-      return true;
-    }
-    if (fence.marker === '~' && /^~{3,}\s*$/.test(trimmed)) {
-      fence.inFence = false;
-      return true;
-    }
-    return false;
-  }
-  const backtickMatch = trimmed.match(/^(`{3,})/);
-  if (backtickMatch) {
-    fence.inFence = true;
-    fence.marker = '`';
-    return true;
-  }
-  const tildeMatch = trimmed.match(/^(~{3,})/);
-  if (tildeMatch) {
-    fence.inFence = true;
-    fence.marker = '~';
-    return true;
-  }
-  return false;
-}
+import { findCodeLines } from './fences.js';
+import { isStandaloneImage } from './images.js';
+import { removeAttribute } from '../html/tags.js';
 
 export function transformDirectives(pageContent, state) {
   const lines = pageContent.split('\n');
   const result = [];
   let tocExcludeDepth = 0;
-  const fence = { inFence: false, marker: '' };
+  const codeLines = findCodeLines(lines);
+  state.containerDepth = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trim();
 
-    if (isFenceBoundary(lines[i], fence)) {
-      result.push(lines[i]);
-      continue;
-    }
-
-    if (fence.inFence) {
+    if (codeLines.has(i)) {
       result.push(lines[i]);
       continue;
     }
@@ -98,6 +69,8 @@ export function transformDirectives(pageContent, state) {
         continue;
       }
 
+      state.containerDepth++;
+
       if (extraTokens) {
         const parsed = parseApplyNext(extraTokens);
         let classAttr = tag;
@@ -118,17 +91,15 @@ export function transformDirectives(pageContent, state) {
 
     const closeMatch = trimmed.match(/^<!--\s*\/([a-zA-Z][a-zA-Z0-9]*)\s*-->$/);
     if (closeMatch) {
+      state.containerDepth = Math.max(0, state.containerDepth - 1);
       result.push('</div>');
       continue;
     }
 
-    if (state.pendingImageCss && trimmed.match(/^!\[(.*?)\]\((.+?)\)$/) && !trimmed.startsWith('<!--')) {
+    if (state.pendingImageCss && isStandaloneImage(trimmed)) {
       const css = state.pendingImageCss;
       state.pendingImageCss = null;
-      const imageMatch = trimmed.match(/^!\[(.*?)\]\((.+?)\)$/);
-      const alt = imageMatch ? imageMatch[1] : '';
-      const src = imageMatch ? imageMatch[2].replace(/^<|>$/g, '') : '';
-      result.push(`![${alt}](<${src}>){style="${escapeHtmlAttribute(css)}" marker="image-css"}`);
+      result.push(`${lines[i]}{style="${escapeHtmlAttribute(css)}" marker="image-css"}`);
       continue;
     }
 
@@ -150,7 +121,7 @@ export function transformDirectives(pageContent, state) {
   return result.join('\n');
 }
 
-export function transformPageContent(pageContent, pageMeta) {
+export function transformPageContent(pageContent, pageMeta, env = {}) {
   const state = {
     layout: pageMeta.layout,
     warnings: [],
@@ -160,7 +131,7 @@ export function transformPageContent(pageContent, pageMeta) {
   };
 
   const transformed = transformDirectives(pageContent, state);
-  const html = renderMarkdown(transformed);
+  const html = renderMarkdown(transformed, env);
 
   // Unwrap standalone and linked images from paragraph tags to prevent
   // paragraph margins and block-formatting-context issues in multi-column layouts.
@@ -188,6 +159,7 @@ export function transformPageContent(pageContent, pageMeta) {
   );
 
   processedHtml = applyNextAttributes(processedHtml);
+  processedHtml += '</div>\n'.repeat(state.containerDepth);
 
   return { html: processedHtml, warnings: state.warnings };
 }
@@ -202,6 +174,7 @@ function applyNextAttributes(html) {
     let updatedAttrs = existingAttrs || '';
 
     if (parsed.id) {
+      updatedAttrs = removeAttribute(updatedAttrs, 'data-mp-auto-id');
       if (/\sid\s*=/.test(updatedAttrs)) {
         updatedAttrs = updatedAttrs.replace(/\sid\s*=\s*"[^"]*"/, ` id="${escapeHtmlAttribute(parsed.id)}"`);
       } else {

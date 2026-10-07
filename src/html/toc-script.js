@@ -129,7 +129,7 @@
 
     var link = document.createElement("a");
     link.className = "toc-link";
-    link.href = "#" + item.id;
+    link.href = "#" + encodeURIComponent(item.id);
 
     var text = document.createElement("span");
     text.className = "toc-text";

@@ -37,18 +37,22 @@ export function resolveImage(imagePath, sourceFile) {
 }
 
 export function resolveProjectImage(imagePath, sourceFile, projectRoot) {
-  if (path.isAbsolute(imagePath)) {
-    return path.normalize(imagePath);
+  const suffixIndex = imagePath.search(/[?#]/);
+  const suffix = suffixIndex < 0 ? '' : imagePath.slice(suffixIndex);
+  let filePath = suffixIndex < 0 ? imagePath : imagePath.slice(0, suffixIndex);
+  try { filePath = decodeURIComponent(filePath); } catch { /* A literal percent sign is a valid filename character. */ }
+  if (path.isAbsolute(filePath)) {
+    return path.normalize(filePath) + suffix;
   }
 
   if (projectRoot) {
-    const projectResolved = path.normalize(path.resolve(projectRoot, imagePath));
+    const projectResolved = path.normalize(path.resolve(projectRoot, filePath));
     if (fs.existsSync(projectResolved)) {
-      return projectResolved;
+      return projectResolved + suffix;
     }
   }
 
-  return resolveImage(imagePath, sourceFile);
+  return resolveImage(filePath, sourceFile) + suffix;
 }
 
 export function normalizePath(p) {

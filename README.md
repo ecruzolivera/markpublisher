@@ -2,13 +2,15 @@
 
 Convert extended Markdown (with HTML comment directives) into styled HTML and PDF for professional book publishing.
 
+Requires **Node.js 22.12.0 or newer**. Development and CI also cover Node 24.
+
 ## Quick Start
 
 ```bash
 # Create a new book project
 npx create-markpublisher-book my-book
 cd my-book
-markpublisher serve
+npx markpublisher serve
 ```
 
 Or using npm:
@@ -57,6 +59,10 @@ failOnWarning = false
 port = 3000
 ```
 
+Configuration is discovered upward from the current directory. Without a config file, the current directory is the project root, `book.md` is the input, and the default workflow settings apply. A `themes/default/theme.css` file must still be available through the theme search paths.
+
+`output.html`, `output.pdf`, and `build.failOnWarning` must be booleans. `serve.port` must be an integer from 1 to 65535. Unknown keys emit warnings, including keys inside these tables. Invalid TOML or schema values exit with code 2.
+
 ## Markdown Extensions (Directives)
 
 All directives use HTML comment syntax so they're invisible in Obsidian, GitHub, and VS Code.
@@ -89,6 +95,10 @@ Page directives persist across `pagebreak` boundaries until changed.
 | `<!-- apply-next:.myclass #myid -->`                  | Apply class/id to next block element      |
 | `<!-- tag.class #id -->`                              | Open wrapper container                    |
 | `<!-- /tag -->`                                       | Close wrapper container                   |
+
+Open containers are closed in reverse nesting order at page breaks and at the end of the document, with warnings. Directives and includes inside fenced code examples remain literal; shorter fence markers do not close a longer fence.
+
+Generated heading IDs are unique across the book, and footnote references/backlinks are scoped to their page. Explicit author IDs are preserved. Reusing an explicit ID produces an ambiguity warning with the conflicting locations; correct those IDs to make navigation reliable. `build.failOnWarning = true` makes these warnings fail the build with code 3.
 
 ### Wikilink Includes
 
@@ -135,10 +145,12 @@ Exit codes: 0 (success), 1 (file not found), 2 (invalid config), 3 (render error
 markpublisher serve
 ```
 
-- Opens `http://localhost:3000` (configurable via `[serve].port`)
-- Auto-reloads on file changes via SSE (watches main file and all `![[...]]` includes)
+- Serves `http://127.0.0.1:3000` on loopback only (configurable via `[serve].port`)
+- Auto-reloads via SSE when input, includes, configuration, theme stylesheets, or local assets change
+- Applies input/theme config edits live; changing the listen port requires restarting the server and emits a diagnostic
+- Serves only registered image/font/theme assets, rather than exposing the entire project directory
 - Pagination toolbar with zoom, single/facing spread, page navigation
-- Error overlay on render errors
+- Recoverable error page for invalid edits; fixing the config/source restores preview without restarting
 
 ## Building
 
@@ -148,7 +160,9 @@ markpublisher build
 # → output/output.pdf
 ```
 
-The build output is fully offline — images, fonts, and CSS are bundled into `output/assets/`. The generated HTML includes the pagination toolbar for preview navigation. PDF generation uses Puppeteer (headless Chromium). On first run, Puppeteer downloads a compatible Chromium binary.
+Images, fonts, and CSS are bundled into `output/assets/` for offline output. Failed or unsupported references emit warnings and may remain unresolved; use local assets and inspect warnings for reproducible builds. The generated HTML includes the pagination toolbar for preview navigation. PDF generation uses Puppeteer (headless Chromium), which normally downloads its compatible browser during dependency installation. If install scripts were skipped, run `npx puppeteer browsers install chrome`.
+
+PDF-only builds (`output.html = false`) use a unique temporary HTML file alongside the bundled assets. That temporary file is removed after success or failure; an existing normal HTML output is preserved.
 
 ## Pagination Toolbar
 
@@ -170,7 +184,9 @@ Themes are directories containing a single `theme.css` file (no `theme.toml`). S
 
 ### Page dimensions
 
-PDF page size is parsed from `theme.css`. The renderer looks for `@page { size: A4; }` (standard sizes: A4, A5, Letter, Legal) or `.page { width; height; }` for custom dimensions. Falls back to A4 if neither is found.
+PDF page size is parsed from theme CSS. Named `@page` sizes (A4, A5, Letter, Legal) take precedence over `.page` width/height. Custom sizes can use `@page { size: 6in 9in; }` or `.page { height: 9in; width: 6in; }`; declaration order and intervening properties do not matter. Absolute dimensions support `mm`, `cm`, `in`, `px`, `pt`, and `pc`. Explicit unsupported dimensions emit warnings. With no supported dimensions, the fallback is A4.
+
+CSS imports preserve their media, layer, and supports conditions. Cyclic import edges are omitted with an import-chain warning, and nesting is limited to 32 stylesheets. Remote resources share in-flight downloads, with at most six concurrent fetches and a 30-second deadline per resource.
 
 ### CSS Conventions
 

@@ -9,6 +9,7 @@ export async function generatePdf(htmlPath, pdfSize, outputPath) {
 
   try {
     const page = await browser.newPage();
+    await page.emulateMediaType('print');
     await page.goto(pathToFileURL(htmlPath).href, {
       waitUntil: 'networkidle0',
       timeout: 30000,
@@ -16,12 +17,14 @@ export async function generatePdf(htmlPath, pdfSize, outputPath) {
 
     await page.evaluate(async () => {
       await document.fonts.ready;
+      await window.__allImagesLoaded;
       await window.__tocReady;
     });
 
     const pdfOptions = {
       printBackground: true,
       outline: true,
+      landscape: pdfSize.landscape === true,
       margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
     };
 

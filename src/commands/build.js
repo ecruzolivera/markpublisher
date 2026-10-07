@@ -1,25 +1,25 @@
 import path from 'node:path';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import { loadConfig } from '../config.js';
-import { discoverTheme } from '../themes/loader.js';
+import { discoverTheme, parseThemeCss } from '../themes/loader.js';
 import { preprocess } from '../renderer/preprocessor.js';
-import { transformPageContent, extractHeadingContext } from '../renderer/index.js';
+import { renderDocument } from '../renderer/document.js';
 import { buildHtmlDocument } from '../html/template.js';
 import { createAssetBundler } from '../html/assets.js';
 import { generatePageChrome } from '../html/page-chrome.js';
-import { generatePaginationToolbar } from '../html/pagination-toolbar.js';
+import { addPreviewControls } from '../html/preview.js';
 import { generatePdf } from '../pdf/generator.js';
 
-export async function buildCommand() {
-  const { config, warnings: configWarnings } = loadConfig();
+export async function buildCommand({ cwd = process.cwd(), pdfGenerator = generatePdf, fetchImpl = globalThis.fetch } = {}) {
+  const { config, warnings: configWarnings } = loadConfig(cwd);
   const warnAll = [...configWarnings];
 
   const inputPath = config.input || 'book.md';
   const absInput = path.resolve(config._configDir || process.cwd(), inputPath);
 
   if (!fs.existsSync(absInput)) {
-    console.error(`Input file not found: ${absInput}`);
-    process.exit(1);
+    throw Object.assign(new Error(`Input file not found: ${absInput}`), { exitCode: 1 });
   }
 
   console.log(`Loading ${absInput}...`);
@@ -27,9 +27,7 @@ export async function buildCommand() {
   const result = preprocess(absInput, warnAll, config._configDir);
 
   if (!result.success) {
-    console.error('Preprocessing errors:');
-    result.errors.forEach(e => console.error(`  ${e}`));
-    process.exit(3);
+    throw new Error(`Preprocessing errors:\n${result.errors.join('\n')}`);
   }
 
   const themeResult = discoverTheme(config.theme || 'default', warnAll, config._configDir);
@@ -38,97 +36,55 @@ export async function buildCommand() {
   fs.mkdirSync(outputDir, { recursive: true });
   const htmlPath = path.join(outputDir, (config.name || 'output') + '.html');
   const shouldWriteHtml = config.output?.html !== false;
-  const assetBundler = createAssetBundler({ outputDir, warnings: warnAll });
+  const assetBundler = createAssetBundler({ outputDir, warnings: warnAll, fetchImpl });
   const bundledThemeParts = [];
   for (const cssEntry of themeResult.cssEntries || []) {
     bundledThemeParts.push(await assetBundler.bundleCss(cssEntry.content, { type: 'local', path: cssEntry.path }));
   }
-  const bundledThemeHref = assetBundler.writeBundledCss(bundledThemeParts.join('\n'));
+  const bundledCss = bundledThemeParts.join('\n');
+  const bundledThemeHref = assetBundler.writeBundledCss(bundledCss);
+  const pdfSize = parseThemeCss(bundledCss, warnAll);
 
-  const pages = [];
-  let headingContext = null;
-
-  for (let i = 0; i < result.pages.length; i++) {
-    const pageMeta = result.pages[i];
-    const content = pageMeta.lines.join('\n');
-
-    if (content.trim() === '') {
-      const isToc = pageMeta.tocPages > 0;
-      pages.push({
-        html: '',
-        layout: pageMeta.layout,
-        pageRole: isToc ? 'toc' : 'body',
-        headerText: null,
-        headerVisible: pageMeta.headerVisible,
-        numbering: pageMeta.numbering,
-        pageNumber: null,
-      });
-      continue;
-    }
-
-    const { html, warnings } = transformPageContent(content, pageMeta);
-    warnAll.push(...warnings);
-    const rewrittenHtml = await assetBundler.bundleHtml(html);
-
-    const heading = extractHeadingContext(content);
-    if (heading) headingContext = heading;
-
-    const isToc = pageMeta.tocPages > 0;
-
-    let pageNumber = null;
-    if (pageMeta.numbering === 'arabic') {
-      pageNumber = pageMeta.numberStart + pageMeta.numberCounter;
-    }
-
-    pages.push({
-      html: rewrittenHtml,
-      layout: pageMeta.layout,
-      pageRole: isToc ? 'toc' : 'body',
-      headerText: headingContext,
-      headerVisible: pageMeta.headerVisible,
-      numbering: pageMeta.numbering,
-      pageNumber,
-    });
-  }
+  const pages = await renderDocument(result, html => assetBundler.bundleHtml(html), warnAll);
 
   const fullHtml = buildHtmlDocument(pages, bundledThemeHref, result.frontMatter, generatePageChrome());
 
-  const toolbarPadding = `<style>@media screen { html { scroll-padding-top: calc(var(--toolbar-height) + 40px); } #pages-container { padding-top: calc(var(--toolbar-height) + 40px); } }</style>`;
-  const htmlWithToolbar = fullHtml
-    .replace('</head>', toolbarPadding + '</head>')
-    .replace('</body>', generatePaginationToolbar() + '</body>');
+  const htmlWithToolbar = addPreviewControls(fullHtml);
+
+  if (warnAll.length) {
+    console.warn(`\nWarnings (${warnAll.length}):`);
+    warnAll.forEach(w => console.warn(`  ${w}`));
+  }
+  if (config.build.failOnWarning && warnAll.length) {
+    throw new Error(`Build failed: ${warnAll.length} warning(s) and failOnWarning is enabled.`);
+  }
 
   if (shouldWriteHtml) {
     fs.writeFileSync(htmlPath, htmlWithToolbar);
     console.log(`HTML → ${htmlPath}`);
   }
 
+  let pdfPath = null;
   if (config.output?.pdf !== false) {
     console.log('Generating PDF...');
-    const pdfPath = path.join(outputDir, (config.name || 'output') + '.pdf');
+    pdfPath = path.join(outputDir, (config.name || 'output') + '.pdf');
+    let temporaryPath;
     try {
+      let pdfInput = htmlPath;
       if (!shouldWriteHtml) {
-        fs.writeFileSync(htmlPath, htmlWithToolbar);
+        const candidate = path.join(outputDir, `.markpublisher-${crypto.randomUUID()}.html`);
+        const descriptor = fs.openSync(candidate, 'wx');
+        temporaryPath = candidate;
+        try { fs.writeFileSync(descriptor, htmlWithToolbar); } finally { fs.closeSync(descriptor); }
+        pdfInput = temporaryPath;
       }
-      await generatePdf(htmlPath, themeResult.pdfSize, pdfPath);
+      await pdfGenerator(pdfInput, pdfSize, pdfPath);
     } finally {
-      if (!shouldWriteHtml && fs.existsSync(htmlPath)) {
-        fs.unlinkSync(htmlPath);
-      }
+      if (temporaryPath) fs.rmSync(temporaryPath, { force: true });
     }
     console.log(`PDF → ${pdfPath}`);
   }
 
-  if (warnAll.length) {
-    console.warn(`\nWarnings (${warnAll.length}):`);
-    warnAll.forEach(w => console.warn(`  ${w}`));
-  }
-
-  const failOnWarning = config.build?.failOnWarning === true;
-  if (failOnWarning && warnAll.length) {
-    console.error(`\nBuild failed: ${warnAll.length} warning(s) and failOnWarning is enabled.`);
-    process.exit(3);
-  }
-
   console.log('Done.');
+  return { outputDir, htmlPath: shouldWriteHtml ? htmlPath : null, pdfPath, warnings: warnAll, pages };
 }
