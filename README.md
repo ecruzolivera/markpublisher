@@ -2,6 +2,8 @@
 
 Convert extended Markdown (with HTML comment directives) into styled HTML and PDF for professional book publishing.
 
+MarkPublisher is inspired by [Homebrewery](https://homebrewery.naturalcrit.com/), but instead of a custom markup syntax, layout directives are written as HTML comments (`<!-- ... -->`). That keeps every source file 100% Markdown-compatible — the same text renders identically in Obsidian, GitHub, and VS Code, and only MarkPublisher interprets those comments as page layout.
+
 Requires **Node.js 22.12.0 or newer**. Development and CI also cover Node 24.
 
 ## Quick Start
@@ -68,7 +70,7 @@ Configuration is discovered upward from the current directory. Without a config 
 
 ## Markdown Extensions (Directives)
 
-All directives use HTML comment syntax so they're invisible in Obsidian, GitHub, and VS Code.
+All directives use HTML comment syntax so they're invisible in Obsidian, GitHub, and VS Code. This is the core design choice inherited from Homebrewery's spirit: rather than a custom markup language, layout is expressed as plain Markdown comments, so your source stays 100% Markdown-compatible no matter where you read or edit it.
 
 ### Page Directives
 
