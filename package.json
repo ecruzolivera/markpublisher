@@ -1,6 +1,6 @@
 {
   "name": "markpublisher",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Convert extended Markdown into styled HTML and PDF for professional book publishing",
   "type": "module",
   "bin": {
