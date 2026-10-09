@@ -45,8 +45,6 @@ Images are supported with standard Markdown syntax:
 
 Or with wikilink syntax for a shorter form:
 
-<!-- ![[images/cover.svg]] -->
-
 ![[images/cover.jpg]]
 
 Both resolve to the correct filesystem path. Project-root-first resolution means image paths work the same way from any chapter file.
