@@ -47,6 +47,7 @@ Create a `markpublisher.toml` in your project root:
 input = "book.md"
 theme = "default"
 outputDir = "./output"
+name = "output"
 
 [output]
 html = true
@@ -60,6 +61,8 @@ port = 3000
 ```
 
 Configuration is discovered upward from the current directory. Without a config file, the current directory is the project root, `book.md` is the input, and the default workflow settings apply. A `themes/default/theme.css` file must still be available through the theme search paths.
+
+`name` sets the base filename for generated output (default `"output"`): the HTML and PDF are written as `output/<name>.html` and `output/<name>.pdf`.
 
 `output.html`, `output.pdf`, and `build.failOnWarning` must be booleans. `serve.port` must be an integer from 1 to 65535. Unknown keys emit warnings, including keys inside these tables. Invalid TOML or schema values exit with code 2.
 
@@ -88,6 +91,8 @@ Page directives persist across `pagebreak` boundaries until changed.
 | `<!-- columnbreak -->`                                | Force column break (ignored in singlecol) |
 | `<!-- toc:pages=N -->`                                | Insert TOC, reserve N pages               |
 | `<!-- toc:pages=N levels=1,2 -->`                     | Insert TOC with specific heading levels   |
+
+Bare `<!-- toc -->` is deprecated and no longer inserts a TOC; use `<!-- toc:pages=N -->` instead.
 | `<!-- toc-exclude -->`                                | Start excluding headings from TOC         |
 | `<!-- /toc-exclude -->`                               | Stop excluding headings from TOC          |
 | `<!-- image: width: 80%; border: 1px solid #ccc; -->` | Apply CSS to next image only              |
@@ -156,8 +161,8 @@ markpublisher serve
 
 ```bash
 markpublisher build
-# → output/output.html
-# → output/output.pdf
+# → output/<name>.html   (name defaults to "output")
+# → output/<name>.pdf
 ```
 
 Images, fonts, and CSS are bundled into `output/assets/` for offline output. Failed or unsupported references emit warnings and may remain unresolved; use local assets and inspect warnings for reproducible builds. The generated HTML includes the pagination toolbar for preview navigation. PDF generation uses Puppeteer (headless Chromium), which normally downloads its compatible browser during dependency installation. If install scripts were skipped, run `npx puppeteer browsers install chrome`.
