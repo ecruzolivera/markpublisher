@@ -78,7 +78,7 @@ This produces two output files:
 - `output/output.html` -- a standalone HTML file with pagination toolbar, bundled images, and all CSS embedded
 - `output/output.pdf` -- a print-ready PDF generated from the HTML
 
-The build output is fully offline. All images, fonts, and CSS are bundled into `output/assets/`.
+The HTML is a fully self-contained single file — all images, fonts, and CSS are inlined (no separate `assets/` directory).
 
 <!--pagebreak-->
 

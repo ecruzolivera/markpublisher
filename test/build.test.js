@@ -27,7 +27,9 @@ describe('build output safety', () => {
         temporary = input;
         assert.notEqual(input, previous);
         assert.equal(path.dirname(input), path.dirname(previous));
-        assert.match(fs.readFileSync(input, 'utf8'), /assets\/theme.css/);
+        const tempHtml = fs.readFileSync(input, 'utf8');
+        assert.match(tempHtml, /\.page \{ height:9in/);
+        assert.doesNotMatch(tempHtml, /assets\//);
         assert.deepEqual(size, { width: '6in', height: '9in' });
         if (fail) throw new Error('injected PDF failure');
         fs.writeFileSync(pdfPath, 'test PDF');

@@ -144,9 +144,8 @@ project/
   themes/default/      Theme directory
     theme.css          Visual design (single file)
   output/              Build artifacts
-    output.html        Standalone HTML
+    output.html        Standalone HTML (images, fonts, CSS inlined)
     output.pdf         Print-ready PDF
-    assets/            Bundled images, fonts, CSS
 ```
 
 ## Commands

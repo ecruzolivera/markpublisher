@@ -1,28 +1,54 @@
-import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
-import postcss from 'postcss';
-import valueParser from 'postcss-value-parser';
 import { processCss } from './css.js';
 import { createResourceLoader, resolveReference, sourceKey } from './resources.js';
 import { mapHtmlTagsAsync, getAttribute, setAttribute } from './tags.js';
 
-export function createAssetBundler({ outputDir, warnings = [], fetchImpl = globalThis.fetch, timeoutMs, concurrency }) {
-  const assetsDir = path.join(outputDir, 'assets');
+const MIME_BY_EXT = {
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.jfif': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.avif': 'image/avif',
+  '.apng': 'image/apng',
+  '.bmp': 'image/bmp',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
+  '.css': 'text/css',
+};
+
+// Headers that give no useful type information and should defer to the extension.
+const GENERIC_CONTENT_TYPES = new Set(['', 'application/octet-stream', 'text/plain']);
+
+function mimeFromSource(source, contentType) {
+  const fromHeader = (contentType || '').split(';')[0].trim().toLowerCase();
+  const ext = path.extname(source.type === 'local' ? source.path : new URL(source.url).pathname).toLowerCase();
+  const fromExt = MIME_BY_EXT[ext];
+  // A known file extension is the most reliable signal and matches the previous
+  // (file-based) behavior; fall back to a meaningful header, then to octet-stream.
+  if (fromExt) return fromExt;
+  if (fromHeader && !GENERIC_CONTENT_TYPES.has(fromHeader)) return fromHeader;
+  return 'application/octet-stream';
+}
+
+function toDataUri(buffer, mime) {
+  return `data:${mime};base64,${Buffer.from(buffer).toString('base64')}`;
+}
+
+function fragmentOf(suffix) {
+  if (!suffix) return '';
+  const index = suffix.indexOf('#');
+  return index >= 0 ? suffix.slice(index) : '';
+}
+
+export function createAssetBundler({ warnings = [], fetchImpl = globalThis.fetch, timeoutMs, concurrency }) {
   const loader = createResourceLoader({ warnings, fetchImpl, timeoutMs, concurrency });
   const sourceToAsset = new Map();
-  const assetToSource = new Map([['theme.css', 'bundled theme']]);
-
-  function allocateFileName(base, key) {
-    const parsed = path.parse(base || 'asset');
-    let name = parsed.base;
-    if (assetToSource.has(name) && assetToSource.get(name) !== key) {
-      const hash = crypto.createHash('sha1').update(key).digest('hex').slice(0, 8);
-      name = `${parsed.name}-${hash}${parsed.ext}`;
-    }
-    assetToSource.set(name, key);
-    return name;
-  }
 
   async function bundleReference(reference, baseSource) {
     if (!reference || /^(?:data:|#)/i.test(reference)) return reference;
@@ -40,25 +66,14 @@ export function createAssetBundler({ outputDir, warnings = [], fetchImpl = globa
           sourceToAsset.delete(key);
           return null;
         }
-        const base = source.type === 'local' ? path.basename(source.path)
-          : path.basename(new URL(source.url).pathname) || 'remote-asset';
-        const extension = path.extname(base) ? '' : extensionFromContentType(resource.contentType);
-        const fileName = allocateFileName(base + extension, key);
-        fs.mkdirSync(assetsDir, { recursive: true });
-        const destination = path.join(assetsDir, fileName);
-        try {
-          fs.writeFileSync(destination, resource.buffer);
-        } catch (error) {
-          fs.rmSync(destination, { force: true });
-          sourceToAsset.delete(key);
-          throw error;
-        }
-        return `assets/${encodeURIComponent(fileName)}`;
+        return toDataUri(resource.buffer, mimeFromSource(source, resource.contentType));
       })();
       sourceToAsset.set(key, pending);
     }
     const bundled = await sourceToAsset.get(key);
-    return bundled ? bundled + (source.suffix || '') : null;
+    // Preserve a fragment suffix (e.g. an SVG view reference) on the data URI;
+    // query strings are dropped since they are meaningless for inlined data.
+    return bundled ? bundled + fragmentOf(source.suffix) : null;
   }
 
   return {
@@ -84,29 +99,5 @@ export function createAssetBundler({ outputDir, warnings = [], fetchImpl = globa
         },
       });
     },
-    writeBundledCss(css, fileName = 'theme.css') {
-      fs.mkdirSync(assetsDir, { recursive: true });
-      const root = postcss.parse(css);
-      root.walkDecls(declaration => {
-        const parsed = valueParser(declaration.value);
-        parsed.walk(node => {
-          if (node.type === 'function' && node.value.toLowerCase() === 'url' && node.nodes[0]?.value.startsWith('assets/')) {
-            node.nodes[0].value = node.nodes[0].value.slice(7);
-          }
-        });
-        declaration.value = parsed.toString();
-      });
-      fs.writeFileSync(path.join(assetsDir, fileName), root.toString());
-      return `assets/${fileName}`;
-    },
   };
-}
-
-function extensionFromContentType(contentType) {
-  return {
-    'text/css': '.css', 'image/svg+xml': '.svg', 'image/png': '.png',
-    'image/jpeg': '.jpg', 'image/webp': '.webp', 'font/woff': '.woff',
-    'font/woff2': '.woff2', 'font/ttf': '.ttf', 'application/font-woff': '.woff',
-    'application/font-woff2': '.woff2',
-  }[(contentType || '').split(';')[0].trim().toLowerCase()] || '';
 }

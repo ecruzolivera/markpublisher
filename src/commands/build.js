@@ -9,9 +9,10 @@ import { buildHtmlDocument } from '../html/template.js';
 import { createAssetBundler } from '../html/assets.js';
 import { generatePageChrome } from '../html/page-chrome.js';
 import { addPreviewControls } from '../html/preview.js';
+import { hasFontFaces, detectUsedFontFaces, trimUnusedFontFaces } from '../html/fonts.js';
 import { generatePdf } from '../pdf/generator.js';
 
-export async function buildCommand({ cwd = process.cwd(), pdfGenerator = generatePdf, fetchImpl = globalThis.fetch } = {}) {
+export async function buildCommand({ cwd = process.cwd(), pdfGenerator = generatePdf, fetchImpl = globalThis.fetch, fontDetector = detectUsedFontFaces } = {}) {
   const { config, warnings: configWarnings } = loadConfig(cwd);
   const warnAll = [...configWarnings];
 
@@ -36,20 +37,36 @@ export async function buildCommand({ cwd = process.cwd(), pdfGenerator = generat
   fs.mkdirSync(outputDir, { recursive: true });
   const htmlPath = path.join(outputDir, (config.name || 'output') + '.html');
   const shouldWriteHtml = config.output?.html !== false;
-  const assetBundler = createAssetBundler({ outputDir, warnings: warnAll, fetchImpl });
+  const assetBundler = createAssetBundler({ warnings: warnAll, fetchImpl });
   const bundledThemeParts = [];
   for (const cssEntry of themeResult.cssEntries || []) {
     bundledThemeParts.push(await assetBundler.bundleCss(cssEntry.content, { type: 'local', path: cssEntry.path }));
   }
   const bundledCss = bundledThemeParts.join('\n');
-  const bundledThemeHref = assetBundler.writeBundledCss(bundledCss);
   const pdfSize = parseThemeCss(bundledCss, warnAll);
 
   const pages = await renderDocument(result, html => assetBundler.bundleHtml(html), warnAll);
 
-  const fullHtml = buildHtmlDocument(pages, bundledThemeHref, result.frontMatter, generatePageChrome());
+  const fullHtml = buildHtmlDocument(pages, bundledCss, result.frontMatter, generatePageChrome());
 
-  const htmlWithToolbar = addPreviewControls(fullHtml);
+  let htmlWithToolbar = addPreviewControls(fullHtml);
+
+  if (config.build.trimUnusedFonts !== false && hasFontFaces(bundledCss)) {
+    const probePath = path.join(outputDir, `.markpublisher-${crypto.randomUUID()}.html`);
+    try {
+      fs.writeFileSync(probePath, htmlWithToolbar);
+      const { screen, print } = await fontDetector(probePath);
+      const trimmed = trimUnusedFontFaces(bundledCss, screen, print);
+      if (trimmed.removed > 0) {
+        htmlWithToolbar = addPreviewControls(buildHtmlDocument(pages, trimmed.css, result.frontMatter, generatePageChrome()));
+        console.log(`Embedded fonts trimmed to those in use (removed ${trimmed.removed}).`);
+      }
+    } catch (error) {
+      warnAll.push(`Font trimming skipped (${error.message}); all declared fonts will be embedded.`);
+    } finally {
+      fs.rmSync(probePath, { force: true });
+    }
+  }
 
   if (warnAll.length) {
     console.warn(`\nWarnings (${warnAll.length}):`);

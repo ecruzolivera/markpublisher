@@ -9,12 +9,15 @@ import puppeteer from 'puppeteer';
 import { createAssetBundler } from '../src/html/assets.js';
 import { createResourceLoader } from '../src/html/resources.js';
 import { parseThemeCss } from '../src/themes/loader.js';
+import { buildHtmlDocument, safeStyleText } from '../src/html/template.js';
+import { generatePageChrome } from '../src/html/page-chrome.js';
+import { addPreviewControls } from '../src/html/preview.js';
 
 function fixture(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'markpublisher-css-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const warnings = [];
-  return { dir, warnings, bundler: createAssetBundler({ outputDir: dir, warnings }) };
+  return { dir, warnings, bundler: createAssetBundler({ warnings }) };
 }
 
 describe('CSS structure and resources', () => {
@@ -41,7 +44,7 @@ describe('CSS structure and resources', () => {
     assert.match(css, /@layer book/);
     assert.match(css, /@supports \(display: grid\)/);
     const html = path.join(dir, 'test.html');
-    fs.writeFileSync(html, `<html><head><link rel="stylesheet" href="${bundler.writeBundledCss(css)}"></head><body>Text</body></html>`);
+    fs.writeFileSync(html, `<html><head><style>${css}</style></head><body>Text</body></html>`);
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
     t.after(() => browser.close());
     const page = await browser.newPage();
@@ -76,17 +79,28 @@ describe('CSS structure and resources', () => {
     const { dir } = fixture(t);
     let calls = 0;
     const warnings = [];
-    const bundler = createAssetBundler({ outputDir: dir, warnings, fetchImpl: async () => {
+    const bundler = createAssetBundler({ warnings, fetchImpl: async () => {
       calls++;
       await delay(5);
       return new Response('<svg/>', { headers: { 'content-type': 'image/svg+xml' } });
     } });
     const html = await bundler.bundleHtml('<img src=\'https://example.test/icon.svg#one\'><img src=https://example.test/icon.svg#two><img src="data:image/png;base64,AA==">');
     assert.equal(calls, 1);
-    assert.match(html, /assets\/icon.svg#one/);
-    assert.match(html, /assets\/icon.svg#two/);
+    assert.match(html, /data:image\/svg\+xml;base64,/);
     assert.match(html, /data:image\/png/);
+    assert.ok(!html.includes('assets/'));
     assert.deepEqual(warnings, []);
+  });
+
+  it('sends a browser User-Agent on remote fetches', async () => {
+    let options;
+    const warnings = [];
+    const loader = createResourceLoader({ warnings, fetchImpl: async (url, opts) => {
+      options = opts;
+      return new Response('ok', { headers: { 'content-type': 'text/plain' } });
+    } });
+    await loader.load({ type: 'remote', url: 'https://example.test/font' });
+    assert.match(options.headers['User-Agent'], /Mozilla\/5\.0/);
   });
 
   it('retains each cached import origin and detects cycles through HTTP redirects', async t => {
@@ -99,11 +113,11 @@ describe('CSS structure and resources', () => {
       fs.symlinkSync(shared, path.join(dir, name, 'alias.css'));
       fs.writeFileSync(path.join(dir, name, 'image.svg'), `<svg>${name}</svg>`);
     }
-    await bundler.bundleCss('@import "one/alias.css"; @import "two/alias.css";', { type: 'local', path: path.join(dir, 'theme.css') });
-    const assets = fs.readdirSync(path.join(dir, 'assets')).map(name => fs.readFileSync(path.join(dir, 'assets', name), 'utf8'));
-    assert.deepEqual(new Set(assets), new Set(['<svg>one</svg>', '<svg>two</svg>']));
+    const bundled = await bundler.bundleCss('@import "one/alias.css"; @import "two/alias.css";', { type: 'local', path: path.join(dir, 'theme.css') });
+    assert.ok(bundled.includes(Buffer.from('<svg>one</svg>').toString('base64')));
+    assert.ok(bundled.includes(Buffer.from('<svg>two</svg>').toString('base64')));
     let fetches = 0;
-    const redirected = createAssetBundler({ outputDir: dir, warnings, fetchImpl: async () => {
+    const redirected = createAssetBundler({ warnings, fetchImpl: async () => {
       fetches++;
       return {
         ok: true, url: 'https://example.test/final.css', headers: new Headers({ 'content-type': 'text/css' }),
@@ -142,5 +156,65 @@ describe('CSS structure and resources', () => {
     assert.equal(signal.aborted, true);
     assert.ok(warnings.some(w => /broken body/.test(w)));
     assert.ok(warnings.some(w => /deadline exceeded/.test(w)));
+  });
+});
+
+describe('inline CSS safety', () => {
+  it('neutralizes </style> without changing CSS meaning', () => {
+    assert.equal(safeStyleText('a::before { content: "</style>" }'), 'a::before { content: "<\\/style>" }');
+    assert.equal(safeStyleText('</STYLE>'), '<\\/STYLE>');
+    assert.equal(safeStyleText('body { color: red }'), 'body { color: red }');
+  });
+
+  it('renders inline CSS containing </style> without terminating the element', async t => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'markpublisher-inline-'));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const css = '.x::before { content: "</style>"; } body { color: rgb(255, 0, 0); }';
+    const html = buildHtmlDocument([{ html: '<p class="x">Hi</p>', layout: 'twocol' }], css, {}, generatePageChrome());
+    const file = path.join(dir, 'test.html');
+    fs.writeFileSync(file, html);
+    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+    t.after(() => browser.close());
+    const page = await browser.newPage();
+    await page.goto(pathToFileURL(file).href);
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body).color), 'rgb(255, 0, 0)');
+    assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.x'), '::before').content), /<\/style>/);
+  });
+
+  it('injects preview controls at document boundaries, not tag-like CSS/JS text', async t => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'markpublisher-preview-boundaries-'));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    const css = `/* </head> </body> </style> */
+      .x::before { content: "</head> </body> </style>" }
+      body { color: rgb(255, 0, 0) }`;
+    const content = `<p class="x">Hi</p><!-- </head> </body> -->
+      <script>window.tagText = "</head> </body>";</script>`;
+    const original = buildHtmlDocument([{ html: content, layout: 'twocol' }], css, {}, generatePageChrome());
+    const html = addPreviewControls(original, '<script>window.liveProbe = true;</script>');
+    assert.ok(html.includes('<style>@media screen { html { scroll-padding-top:'));
+    assert.equal((html.match(/id="pagination-toolbar"/g) || []).length, 1);
+    const file = path.join(dir, 'test.html');
+    fs.writeFileSync(file, html);
+    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+    t.after(() => browser.close());
+    const page = await browser.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto(pathToFileURL(file).href);
+    const outcome = await page.evaluate(() => ({
+      color: getComputedStyle(document.body).color,
+      content: getComputedStyle(document.querySelector('.x'), '::before').content,
+      toolbar: document.querySelectorAll('body #pagination-toolbar').length,
+      padding: getComputedStyle(document.getElementById('pages-container')).paddingTop,
+      tagText: window.tagText,
+      live: window.liveProbe,
+    }));
+    assert.equal(outcome.color, 'rgb(255, 0, 0)');
+    assert.equal(outcome.content, '"</head> </body> </style>"');
+    assert.equal(outcome.toolbar, 1);
+    assert.ok(parseFloat(outcome.padding) > 0);
+    assert.equal(outcome.tagText, '</head> </body>');
+    assert.equal(outcome.live, true);
+    assert.deepEqual(errors, []);
   });
 });

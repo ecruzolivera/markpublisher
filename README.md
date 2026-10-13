@@ -35,7 +35,7 @@ markpublisher serve
 - **Configurable page numbering** (arabic/none, persistent state)
 - **Wikilink includes** (`![[path]]`) for multi-file projects, project-root-first resolution
 - **Fenced containers** with nesting for styled blocks
-- **Offline HTML output** — images, fonts, and CSS are bundled into `output/assets/`
+- **Self-contained HTML output** — images, fonts, and CSS are inlined into a single portable file
 - **Live-reload dev server** for preview while editing
 - **Pagination toolbar** — zoom, single/facing spread, page navigation in both serve and build
 - **Pluggable theme system** with CSS
@@ -167,9 +167,9 @@ markpublisher build
 # → output/<name>.pdf
 ```
 
-Images, fonts, and CSS are bundled into `output/assets/` for offline output. Failed or unsupported references emit warnings and may remain unresolved; use local assets and inspect warnings for reproducible builds. The generated HTML includes the pagination toolbar for preview navigation. PDF generation uses Puppeteer (headless Chromium), which normally downloads its compatible browser during dependency installation. If install scripts were skipped, run `npx puppeteer browsers install chrome`.
+The HTML is a fully self-contained single file: images, fonts, and CSS are inlined (fonts and images as `data:` URIs, CSS as `<style>`), so you can share or archive it without any accompanying directory. Note that inlining base64 inflates binary assets by roughly a third, so a book with many or large images — or theme fonts pulled in via remote `@import` — produces a proportionally larger file. Failed or unsupported references emit warnings and may remain unresolved; use local assets and inspect warnings for reproducible builds. The generated HTML includes the pagination toolbar for preview navigation. PDF generation uses Puppeteer (headless Chromium), which normally downloads its compatible browser during dependency installation. If install scripts were skipped, run `npx puppeteer browsers install chrome`.
 
-PDF-only builds (`output.html = false`) use a unique temporary HTML file alongside the bundled assets. That temporary file is removed after success or failure; an existing normal HTML output is preserved.
+PDF-only builds (`output.html = false`) use a unique temporary self-contained HTML file. That temporary file is removed after success or failure; an existing normal HTML output is preserved.
 
 ## Pagination Toolbar
 
@@ -222,7 +222,9 @@ The `@page { size: ...; margin: 0; }` rule should be set, with margins handled b
 
 Themes can declare `@font-face` rules in CSS. Font files should be bundled in `themes/<name>/fonts/` for reproducible, offline-friendly builds.
 
-Remote fonts (`@import` / `@font-face` with `http(s)` URLs) are supported but emit warnings, as output depends on network availability.
+Remote fonts (`@import` / `@font-face` with `http(s)` URLs) are supported but emit warnings, as output depends on network availability at build time. Remote font downloads use a browser User-Agent so Google Fonts and similar CDNs serve compact woff2 subsets rather than legacy TTF files.
+
+By default, `build` loads the page in headless Chromium (screen and print media) and removes unused font faces when it can do so safely. Themes with conditional or variable-driven font selection retain their declared faces so the standalone HTML still renders correctly at other viewport sizes and interaction states. Ambiguous face matching or unavailable Chromium also retains all faces. Disable trimming with `trimUnusedFonts = false` in the `[build]` table.
 
 ## Out of Scope (v1)
 

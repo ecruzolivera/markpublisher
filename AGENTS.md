@@ -32,7 +32,8 @@ Pipeline: **preprocessor** → **directive transform** → **markdown-it** → *
 | Markdown | `src/renderer/markdown.js` | markdown-it + 7 plugins (incl. anchor, attrs) |
 | HTML template | `src/html/template.js` | DOCTYPE, TOC script, image-wait script |
 | Page chrome | `src/html/page-chrome.js` | Renderer-owned CSS (page stacking, shadows, TOC layout) |
-| Asset bundler | `src/html/assets.js` | Copies/downloads images/fonts/CSS into `output/assets/` |
+| Asset inliner | `src/html/assets.js` | Inlines images/fonts/CSS into the HTML as data URIs |
+| Font trimmer | `src/html/fonts.js` | Browser-backed detection + removal of unused `@font-face` rules |
 | PDF generator | `src/pdf/generator.js` | Puppeteer, loads real HTML file via `page.goto(file://...)` |
 | Theme loader | `src/themes/loader.js` | Discovery, validation, remote font detection |
 | Config | `src/config.js` | TOML parser, upward search for `markpublisher.toml` |

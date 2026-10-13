@@ -20,7 +20,7 @@ it('generates a real custom-size PDF using relative bundled assets and print CSS
   const size = pdf.getPage(0).getSize();
   assert.ok(Math.abs(size.width - 432) < 1);
   assert.ok(Math.abs(size.height - 648) < 1);
-  assert.ok(fs.existsSync(path.join(dir, 'output/assets/cover.svg')));
+  assert.equal(fs.existsSync(path.join(dir, 'output/assets')), false);
   assert.equal(fs.existsSync(path.join(dir, 'output/output.html')), false);
   assert.equal(fs.readdirSync(path.join(dir, 'output')).some(name => name.startsWith('.markpublisher-')), false);
 });

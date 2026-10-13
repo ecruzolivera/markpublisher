@@ -19,6 +19,7 @@ const DEFAULTS = {
   },
   build: {
     failOnWarning: false,
+    trimUnusedFonts: true,
   },
   serve: {
     port: 3000,

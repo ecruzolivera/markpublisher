@@ -1,6 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+// Some CDNs (notably Google Fonts) serve smaller, modern formats (woff2 variable
+// fonts and unicode-range subsets) only to browser-like User-Agents. Node's fetch
+// sends no browser UA, so it would otherwise receive legacy static TTF files.
+const BROWSER_USER_AGENT = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
 export function resolveReference(reference, baseSource) {
   if (!reference || /^(?:data:|#)/i.test(reference)) return null;
   try {
@@ -43,7 +48,10 @@ export function createResourceLoader({ warnings, fetchImpl = globalThis.fetch, t
     try {
       const work = async () => {
         if (typeof fetchImpl !== 'function') throw new Error('fetch support is unavailable');
-        const response = await fetchImpl(source.url, { signal: controller.signal });
+        const response = await fetchImpl(source.url, {
+          signal: controller.signal,
+          headers: { 'User-Agent': BROWSER_USER_AGENT },
+        });
         if (!response.ok) {
           await response.body?.cancel();
           throw new Error(`HTTP ${response.status}`);

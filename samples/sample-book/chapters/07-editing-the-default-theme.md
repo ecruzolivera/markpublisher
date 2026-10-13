@@ -305,7 +305,7 @@ The default theme imports fonts from Google Fonts at the top of the file:
 @import url("https://fonts.googleapis.com/...");
 ```
 
-This is convenient for development but means the output depends on network availability. For fully offline builds, download font files into a `fonts/` directory inside your theme and use `@font-face` rules instead.
+This is convenient for development but means the output depends on network availability at build time. MarkPublisher downloads fonts with a browser User-Agent (so Google Fonts serves compact woff2 subsets), and by default removes unused faces when safe. Conditional or variable-driven font selection retains all declared faces so other viewport sizes and interaction states keep working. For fully offline builds, download font files into a `fonts/` directory inside your theme and use `@font-face` rules instead.
 
 <!-- pagebreak -->
 

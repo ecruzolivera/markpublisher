@@ -13,32 +13,29 @@ function cleanup() {
   }
 }
 
-describe('html asset bundler', () => {
-  it('copies local image assets into output/assets and rewrites src', async () => {
+const b64 = value => Buffer.from(value).toString('base64');
+
+describe('html asset bundler (self-contained)', () => {
+  it('inlines local image assets as data URIs', async () => {
     cleanup();
     const sourceDir = path.join(TEST_DIR, 'source');
-    const outputDir = path.join(TEST_DIR, 'output');
     fs.mkdirSync(sourceDir, { recursive: true });
-    fs.mkdirSync(outputDir, { recursive: true });
 
     const sourceImage = path.join(sourceDir, 'cover.svg');
     fs.writeFileSync(sourceImage, '<svg/>');
 
     const warnings = [];
-    const bundler = createAssetBundler({ outputDir, warnings });
+    const bundler = createAssetBundler({ warnings });
     const html = await bundler.bundleHtml(`<p><img src="${sourceImage}" alt="Cover"></p>`);
 
-    assert.ok(html.includes('src="assets/cover.svg"'));
-    assert.ok(fs.existsSync(path.join(outputDir, 'assets', 'cover.svg')));
+    assert.ok(html.includes(`src="data:image/svg+xml;base64,${b64('<svg/>')}"`));
+    assert.ok(!html.includes('assets/'));
     assert.equal(warnings.length, 0);
     cleanup();
   });
 
-  it('downloads remote image urls and rewrites them locally', async () => {
+  it('downloads remote image urls and inlines them as data URIs', async () => {
     cleanup();
-    const outputDir = path.join(TEST_DIR, 'output');
-    fs.mkdirSync(outputDir, { recursive: true });
-
     const server = http.createServer((req, res) => {
       res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
       res.end('<svg/>');
@@ -48,11 +45,11 @@ describe('html asset bundler', () => {
       const { port } = server.address();
 
       const warnings = [];
-      const bundler = createAssetBundler({ outputDir, warnings });
+      const bundler = createAssetBundler({ warnings });
       const html = await bundler.bundleHtml(`<p><img src="http://127.0.0.1:${port}/image.svg" alt="Remote"></p>`);
 
-      assert.ok(html.includes('src="assets/image.svg"'));
-      assert.ok(fs.existsSync(path.join(outputDir, 'assets', 'image.svg')));
+      assert.ok(html.includes('src="data:image/svg+xml;base64,'));
+      assert.ok(!html.includes('assets/'));
       assert.equal(warnings.length, 0);
     } finally {
       await new Promise(resolve => server.close(resolve));
@@ -60,14 +57,12 @@ describe('html asset bundler', () => {
     }
   });
 
-  it('avoids filename collisions for different local images with same basename', async () => {
+  it('inlines distinct images with the same basename as distinct data URIs', async () => {
     cleanup();
     const sourceDirA = path.join(TEST_DIR, 'a');
     const sourceDirB = path.join(TEST_DIR, 'b');
-    const outputDir = path.join(TEST_DIR, 'output');
     fs.mkdirSync(sourceDirA, { recursive: true });
     fs.mkdirSync(sourceDirB, { recursive: true });
-    fs.mkdirSync(outputDir, { recursive: true });
 
     const imageA = path.join(sourceDirA, 'cover.svg');
     const imageB = path.join(sourceDirB, 'cover.svg');
@@ -75,46 +70,40 @@ describe('html asset bundler', () => {
     fs.writeFileSync(imageB, '<svg>B</svg>');
 
     const warnings = [];
-    const bundler = createAssetBundler({ outputDir, warnings });
+    const bundler = createAssetBundler({ warnings });
     const html = await bundler.bundleHtml(`<img src="${imageA}"><img src="${imageB}">`);
 
-    const files = fs.readdirSync(path.join(outputDir, 'assets')).sort();
-    assert.equal(files.length, 2);
-    assert.ok(files[0] === 'cover.svg' || files[1] === 'cover.svg');
-    assert.ok(files.some(file => /^cover-[a-f0-9]{8}\.svg$/.test(file)));
-    assert.ok(html.includes('src="assets/cover.svg"'));
-    assert.ok(/src="assets\/cover-[a-f0-9]{8}\.svg"/.test(html));
+    assert.ok(html.includes(b64('<svg>A</svg>')));
+    assert.ok(html.includes(b64('<svg>B</svg>')));
+    assert.ok(!html.includes('assets/'));
     cleanup();
   });
 
-  it('reuses the same copied asset for repeated references', async () => {
+  it('reuses the same data URI for repeated references', async () => {
     cleanup();
     const sourceDir = path.join(TEST_DIR, 'source');
-    const outputDir = path.join(TEST_DIR, 'output');
     fs.mkdirSync(sourceDir, { recursive: true });
-    fs.mkdirSync(outputDir, { recursive: true });
 
     const sourceImage = path.join(sourceDir, 'repeat.svg');
     fs.writeFileSync(sourceImage, '<svg/>');
 
     const warnings = [];
-    const bundler = createAssetBundler({ outputDir, warnings });
+    const bundler = createAssetBundler({ warnings });
     const html = await bundler.bundleHtml(`<img src="${sourceImage}"><img src="${sourceImage}">`);
 
-    const files = fs.readdirSync(path.join(outputDir, 'assets'));
-    assert.equal(files.length, 1);
-    assert.equal((html.match(/assets\/repeat\.svg/g) || []).length, 2);
+    const matches = html.match(/data:image\/svg\+xml;base64,[A-Za-z0-9+/=]+/g) || [];
+    assert.equal(matches.length, 2);
+    assert.equal(matches[0], matches[1]);
+    assert.equal(Buffer.from(matches[0].split(',')[1], 'base64').toString('utf8'), '<svg/>');
     cleanup();
   });
 
   it('warns and leaves missing local image paths unchanged', async () => {
     cleanup();
-    const outputDir = path.join(TEST_DIR, 'output');
-    fs.mkdirSync(outputDir, { recursive: true });
     const missingImage = path.join(TEST_DIR, 'missing.svg');
 
     const warnings = [];
-    const bundler = createAssetBundler({ outputDir, warnings });
+    const bundler = createAssetBundler({ warnings });
     const html = await bundler.bundleHtml(`<img src="${missingImage}" alt="Missing">`);
 
     assert.ok(html.includes(`src="${missingImage}"`));
@@ -122,35 +111,27 @@ describe('html asset bundler', () => {
     cleanup();
   });
 
-  it('bundles local css url assets and writes bundled css', async () => {
+  it('inlines local css url assets as data URIs', async () => {
     cleanup();
     const themeDir = path.join(TEST_DIR, 'theme');
-    const outputDir = path.join(TEST_DIR, 'output');
     fs.mkdirSync(path.join(themeDir, 'images'), { recursive: true });
-    fs.mkdirSync(outputDir, { recursive: true });
     fs.writeFileSync(path.join(themeDir, 'images', 'bg.svg'), '<svg/>');
 
     const warnings = [];
-    const bundler = createAssetBundler({ outputDir, warnings });
+    const bundler = createAssetBundler({ warnings });
     const css = await bundler.bundleCss('.hero { background-image: url("images/bg.svg"); }', {
       type: 'local',
       path: path.join(themeDir, 'styles.css'),
     });
-    const href = bundler.writeBundledCss(css);
 
-    assert.equal(href, 'assets/theme.css');
-    assert.ok(fs.existsSync(path.join(outputDir, 'assets', 'bg.svg')));
-    const writtenCss = fs.readFileSync(path.join(outputDir, 'assets', 'theme.css'), 'utf-8');
-    assert.ok(writtenCss.includes('url("bg.svg")'));
+    assert.ok(css.includes(`url("data:image/svg+xml;base64,${b64('<svg/>')}")`));
+    assert.ok(!css.includes('assets/'));
     assert.equal(warnings.length, 0);
     cleanup();
   });
 
-  it('bundles remote css imports and referenced assets', async () => {
+  it('inlines remote css imports and referenced assets', async () => {
     cleanup();
-    const outputDir = path.join(TEST_DIR, 'output');
-    fs.mkdirSync(outputDir, { recursive: true });
-
     const server = http.createServer((req, res) => {
       if (req.url === '/import.css') {
         res.writeHead(200, { 'Content-Type': 'text/css' });
@@ -178,16 +159,15 @@ describe('html asset bundler', () => {
       const { port } = server.address();
 
       const warnings = [];
-      const bundler = createAssetBundler({ outputDir, warnings });
+      const bundler = createAssetBundler({ warnings });
       const css = await bundler.bundleCss(`@import "http://127.0.0.1:${port}/import.css";`, {
         type: 'local',
         path: path.join(TEST_DIR, 'styles.css'),
       });
 
-      assert.ok(css.includes('font.woff2'));
-      assert.ok(css.includes('remote.svg'));
-      assert.ok(fs.existsSync(path.join(outputDir, 'assets', 'font.woff2')));
-      assert.ok(fs.existsSync(path.join(outputDir, 'assets', 'remote.svg')));
+      assert.ok(css.includes('data:font/woff2;base64,'));
+      assert.ok(css.includes('data:image/svg+xml;base64,'));
+      assert.ok(!css.includes('assets/'));
       assert.equal(warnings.length, 0);
     } finally {
       await new Promise(resolve => server.close(resolve));

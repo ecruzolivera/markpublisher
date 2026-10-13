@@ -97,11 +97,11 @@ describe('Markdown preservation', () => {
     const result = preprocess(book, [], project);
     const html = transformPageContent(result.pages[0].lines.join('\n'), result.pages[0]).html;
     const warnings = [];
-    const outputDir = path.join(dir, 'output');
-    const bundled = await createAssetBundler({ outputDir, warnings }).bundleHtml(html);
+    const bundled = await createAssetBundler({ warnings }).bundleHtml(html);
     assert.deepEqual(warnings, []);
-    assert.equal((bundled.match(/src="assets\/icon%2520%23.svg"/g) || []).length, 2);
-    assert.equal(fs.readFileSync(path.join(outputDir, 'assets/icon%20#.svg'), 'utf8'), '<svg/>');
+    assert.equal((bundled.match(/data:image\/svg\+xml;base64,/g) || []).length, 2);
+    const encoded = bundled.match(/data:image\/svg\+xml;base64,([A-Za-z0-9+/=]+)/)[1];
+    assert.equal(Buffer.from(encoded, 'base64').toString('utf8'), '<svg/>');
   });
 
   it('uses the same block grammar for footnote images and nested code', t => {

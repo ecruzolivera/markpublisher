@@ -11,7 +11,7 @@ export function buildHtmlDocument(pages, themeStylesheetHref, frontMatter, pageC
   const lang = frontMatter.lang || 'en';
   const author = frontMatter.author || '';
   const themeMarkup = renderThemeMarkup(themeStylesheetHref);
-  const chromeMarkup = pageChromeCss ? `<style>\n${pageChromeCss}\n  </style>` : '';
+  const chromeMarkup = pageChromeCss ? `<style>\n${safeStyleText(pageChromeCss)}\n  </style>` : '';
 
   const pageHtml = pages.map((page, index) => {
     const layoutClass = page.layout === 'singlecol' ? 'singlecol' : 'twocol';
@@ -86,9 +86,17 @@ function renderThemeMarkup(themeStylesheetHref) {
     return `<link rel="stylesheet" href="${value}">`;
   }
 
-  return `<style>\n${value}\n  </style>`;
+  return `<style>\n${safeStyleText(value)}\n  </style>`;
+}
+
+// Neutralize any literal `</style` (case-insensitive) so it cannot close the
+// <style> element early. `\/` is a valid CSS escape that decodes to `/`, so the
+// stylesheet's meaning is unchanged.
+export function safeStyleText(css) {
+  return String(css).replace(/<\/(?=style)/gi, '<\\/');
 }
 
 function looksLikeStylesheetHref(value) {
+  if (value.includes('\n') || value.includes('{')) return false;
   return /\.css(?:$|[?#])/.test(value) || value.startsWith('assets/');
 }
